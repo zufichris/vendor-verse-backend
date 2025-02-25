@@ -15,7 +15,7 @@ const ENVSchema = z.object({
   ),
   mongo_uri: z.string().min(1, {
     message: "Missing MONGO_URI in .env. Required for database.",
-  }).refine((uri) => uri.startsWith("mongodb://") ?? uri.startsWith("mongodb+srv://"), {
+  }).refine((uri) => uri.startsWith("mongodb://") || uri.startsWith("mongodb+srv://"), {
     message: "MONGO_URI must start with 'mongodb://' or 'mongodb+srv://'.",
   }),
   google_callback_url: z.string().url({
