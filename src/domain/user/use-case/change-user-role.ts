@@ -1,7 +1,7 @@
 import { TUser } from "../../../data/entity/user";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { Role } from "../../../data/enum/user";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
