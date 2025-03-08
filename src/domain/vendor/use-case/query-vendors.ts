@@ -1,6 +1,6 @@
 import { TVendor } from "../../../data/entity/vendor";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IVendorRepository } from "../repository";
 
 export class QueryVendorsUseCase implements BaseUseCase<IQueryFilters<TVendor>, IQueryResult<TVendor>, AuthContext> {
