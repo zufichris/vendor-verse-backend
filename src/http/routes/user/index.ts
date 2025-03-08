@@ -3,15 +3,15 @@ import { userControllers } from "../../controller/user";
 import { authMiddleware } from "../../middleware/auth";
 
 const router = express.Router();
-router.use(authMiddleware.requireAuth)
+router.use(authMiddleware.requireAuth, authMiddleware.requirePermission("user", "manage"),)
 router.route("/")
   .post(userControllers.createUser)
-  .get(authMiddleware.requirePermission("user", "create"), userControllers.queryUsers);
+  .get(userControllers.queryUsers);
 router.route("/:custId",)
-  .get(authMiddleware.requirePermission("user", "view_own"),userControllers.getUser)
-  .patch(userControllers.updateUser,authMiddleware.requirePermission("user", "update"))
+  .get(userControllers.getUser)
+  .patch(userControllers.updateUser)
 router.route("/address/:custId")
 router.route("/stats/:custId")
-  .get(userControllers.getUserStats,authMiddleware.requirePermission("user", "view_own"))
+  .get(userControllers.getUserStats)
 
 export default router;
