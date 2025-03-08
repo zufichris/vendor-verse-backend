@@ -1,7 +1,7 @@
 import { TPayment } from "../../../data/entity/payment";
-import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../shared/use-case";
 import { IPaymentRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
 export interface GetPaymentInput {
