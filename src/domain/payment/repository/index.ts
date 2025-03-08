@@ -1,7 +1,7 @@
 import { FilterQuery, RootFilterQuery } from "mongoose";
 import { TPayment } from "../../../data/entity/payment";
-import { IBaseRepository } from "../../../global/repository";
-import { ID, IQueryFilters, IQueryResult } from "../../../global/entity";
+import { IBaseRepository } from "../../../shared/repository";
+import { ID, IQueryFilters, IQueryResult } from "../../../shared/entity";
 
 export interface IPaymentRepository extends IBaseRepository<TPayment> { }
 
