@@ -1,5 +1,5 @@
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
-import { EStatusCodes } from "../../../global/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
+import { EStatusCodes } from "../../../shared/enum";
 import { IOrderRepository } from "../repository";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
@@ -8,7 +8,7 @@ export class DeleteOrderUseCase implements BaseUseCase<string, boolean, AuthCont
 
     async execute(id: string, context: AuthContext): Promise<UseCaseResult<boolean>> {
         try {
-            const REQUIRED_PERMISSION = getPermission("order","manage_own")
+            const REQUIRED_PERMISSION = getPermission("order", "manage_own")
             const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
             if (!hasPermission) {
                 return handleUseCaseError({
