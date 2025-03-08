@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 import { ShippingRepository } from "../../../../domain/shipping/repository";
 import { ShippingDocument } from "../../model/shipping";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { TShipping } from "../../../entity/shipping";
 import { logger } from "../../../../util/logger";
 import { getQueryMetaData, getUnitId } from "../../../../util/functions";
 
 export class ShippingRepositoryImpl implements ShippingRepository {
-    constructor(private readonly shippingModel: mongoose.Model<ShippingDocument>) {}
+    constructor(private readonly shippingModel: mongoose.Model<ShippingDocument>) { }
 
     async create(data: Partial<TShipping>): Promise<TShipping | null> {
         try {
