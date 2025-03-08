@@ -1,9 +1,9 @@
 import { FilterQuery, RootFilterQuery } from "mongoose";
-import { ID, IQueryFilters, IQueryResult } from "../../../global/entity";
-import { IBaseRepository } from "../../../global/repository";
+import { ID, IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { IBaseRepository } from "../../../shared/repository";
 import { TOrder } from "../../../data/entity/order";
 
-export interface IOrderRepository extends IBaseRepository<TOrder> {}
+export interface IOrderRepository extends IBaseRepository<TOrder> { }
 
 export abstract class OrderRepository implements IOrderRepository {
     abstract create(data: Partial<TOrder>): Promise<TOrder | null>;
