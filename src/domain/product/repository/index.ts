@@ -1,7 +1,7 @@
 import { FilterQuery, RootFilterQuery } from "mongoose";
 import { TProduct } from "../../../data/entity/product";
-import { ID, IQueryFilters, IQueryResult } from "../../../global/entity";
-import { IBaseRepository } from "../../../global/repository";
+import { ID, IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { IBaseRepository } from "../../../shared/repository";
 
 export interface IProductRepository extends IBaseRepository<TProduct, IQueryResult<TProduct>> {
 
