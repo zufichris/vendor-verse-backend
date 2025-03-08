@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { OAuthProviders } from "../../enum/auth";
 import { Role } from "../../enum/user";
-import { ECurrency, ELanguageCode } from "../../../global/enum";
+import { ECurrency, ELanguageCode } from "../../../shared/enum";
 
 export const OAuthSchema = z.object({
     provider: z.nativeEnum(OAuthProviders),
