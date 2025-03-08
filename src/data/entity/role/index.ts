@@ -1,45 +1,50 @@
 import { z } from "zod";
 
 export const EPermissionResource = z.enum([
+    "role",
     "product",
     "user",
     "order",
-    "role",
     "vendor",
     "payment",
     "payment-method",
     "address",
     "shipping",
+    "*"
 ]);
-
-export const EPermissionValue = z.enum([
+export const EPermissionAction = z.enum([
     "manage",
-    "sensitive_data",
     "update",
     "delete",
-    "view_own",
-    "manage_own",
     "view",
     "create",
-    "*",
+    "*"
 ]);
 
-export const defaultPermissions: string[] = [
-    "product:view",
-    "user:view_own",
-    "order:view_own",
-    "address:view",
-    "shipping:create",
-    "payment:create",
-    "payment-method:view",
+export const EPermissionScope = z.enum([
+    "own",
+    "*"
+]);
+
+
+
+export const RolePermission = z.object({
+    resource: EPermissionResource,
+    actions: z.array(EPermissionAction),
+    scope: EPermissionScope
+})
+
+export const defaultPermissions: z.infer<typeof RolePermission>[] = [
+    { resource: "product", actions: ["view"], scope: "*" },
+    { resource: "user", actions: ["manage"], scope: "own" },
+    { resource: "order", actions: ["manage"], scope: "own" },
+    { resource: "vendor", actions: ["view"], scope: "*" },
+    { resource: "payment", actions: ["manage"], scope: "*" },
+    { resource: "payment-method", actions: ["view"], scope: "*" },
+    { resource: "address", actions: ["manage"], scope: "own" },
+    { resource: "shipping", actions: ["manage"], scope: "own" },
 ];
 
-export const RolePermission = z.string().regex(
-    new RegExp(
-        `^(${Object.values(EPermissionResource.enum).join("|")}):(${Object.values(EPermissionValue.enum).join("|")})$`
-    ),
-    "Invalid permission format. Expected format: resource:action"
-);
 
 export const RoleSchema = z.object({
     id: z.string().optional(),
