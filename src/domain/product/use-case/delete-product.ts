@@ -1,5 +1,5 @@
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IProductRepository } from "../repository";
 
 export class DeleteProductUseCase implements BaseUseCase<{ id: string }, boolean, AuthContext> {
