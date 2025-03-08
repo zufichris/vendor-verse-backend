@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { OrderRepository } from "../../../../domain/order/repository";
 import { OrderDocument } from "../../model/order";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { TOrder } from "../../../entity/order";
 import { logger } from "../../../../util/logger";
 import { getQueryMetaData, getUnitId } from "../../../../util/functions";
