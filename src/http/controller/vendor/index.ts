@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { VendorRepositoryImpl } from "../../../data/orm/repository-implementation/vendor";
 import { VendorModel } from "../../../data/orm/model/vendor";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { TVendor } from "../../../data/entity/vendor";
-import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../global/entity";
+import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../shared/entity";
 import { CreateVendorDTO, CreateVendorSchema, UpdateVendorDTO, UpdateVendorSchema } from "../../../data/dto/vendor";
 import VendorUseCase from "../../../domain/vendor/use-case";
 
@@ -34,7 +34,7 @@ export class VendorControllers {
                 return;
             }
 
-            const result = await this.vendorUseCase.create.execute(validate.data,req.user!);
+            const result = await this.vendorUseCase.create.execute(validate.data, req.user!);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, "Failed to create vendor"),
@@ -70,7 +70,7 @@ export class VendorControllers {
                 return;
             }
 
-            const result = await this.vendorUseCase.get.execute({ vendId: vendorId },req.user);
+            const result = await this.vendorUseCase.get.execute({ vendId: vendorId }, req.user);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, "Vendor not found"),
@@ -136,7 +136,7 @@ export class VendorControllers {
             const result = await this.vendorUseCase.updateProfile.execute({
                 data: req.body,
                 id: req.body.id
-            },req.user!);
+            }, req.user!);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, "Failed to update vendor"),
