@@ -1,9 +1,9 @@
 import { TUser } from "../../../data/entity/user";
 import { UpdateUserDTO, UpdateUserSchema } from "../../../data/dto/user";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
 import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 
 export class UpdateUserUseCase implements BaseUseCase<UpdateUserDTO, TUser, AuthContext> {
     constructor(private readonly userRepository: IUserRepository) { }
