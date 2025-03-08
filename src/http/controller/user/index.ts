@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { validateData } from "../../../util/functions";
 import { CreateUserDTO, CreateUserSchema, UpdateUserDTO, UpdateUserSchema } from "../../../data/dto/user";
-import { EStatusCodes } from "../../../global/enum";
-import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../global/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../shared/entity";
 import { TUser } from "../../../data/entity/user";
 import { UserRepositoryImpl } from "../../../data/orm/repository-implementation/user";
 import { UserModel } from "../../../data/orm/model/user";
