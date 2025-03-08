@@ -1,6 +1,6 @@
 import { TProduct } from "../../../data/entity/product";
-import { EStatusCodes } from "../../../global/enum";
-import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { EStatusCodes } from "../../../shared/enum";
+import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IProductRepository } from "../repository";
 
 export class GetProductUseCase implements BaseUseCase<{ id?: string, slug?: string }, TProduct> {
