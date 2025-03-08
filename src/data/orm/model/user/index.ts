@@ -3,7 +3,7 @@ import { TUser, TUserPreferences, TUserStats, UserSchema } from "../../../entity
 import { OAuthProviders } from "../../../enum/auth";
 import { Role } from "../../../enum/user";
 import { validateBeforeSave } from "../../../../util/functions";
-import { ECurrency, ELanguageCode } from "../../../../global/enum";
+import { ECurrency, ELanguageCode } from "../../../../shared/enum";
 
 export type UserDocument = TUser & mongoose.Document;
 
