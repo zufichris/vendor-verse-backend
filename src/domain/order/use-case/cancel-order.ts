@@ -1,8 +1,8 @@
 import { TOrder } from "../../../data/entity/order";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { CancelOrderDTO, CancelOrderSchema } from "../../../data/dto/order";
 import { IOrderRepository } from "../repository";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
 
 export class CancelOrderUseCase implements BaseUseCase<CancelOrderDTO, TOrder, AuthContext> {
