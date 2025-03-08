@@ -1,9 +1,9 @@
 import { CreateRoleDTO, CreateRoleSchema } from "../../../data/dto/role";
 import { defaultPermissions, TRole } from "../../../data/entity/role";
-import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IRoleRepository } from "../repository";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { logger } from "../../../util/logger";
 
 type DefaultRoles = "User" | "Vendor" | "Admin"
