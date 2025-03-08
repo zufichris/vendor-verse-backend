@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { VendorRepository } from "../../../../domain/vendor/repository";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { logger } from "../../../../util/logger";
 import { TVendor } from "../../../entity/vendor";
 import { VendorDocument, VendorModel } from "../../model/vendor";
