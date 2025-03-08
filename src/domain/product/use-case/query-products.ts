@@ -1,6 +1,6 @@
 import { TProduct } from "../../../data/entity/product";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IProductRepository } from "../repository";
 
 export class QueryProductsUseCase implements BaseUseCase<IQueryFilters<TProduct>, IQueryResult<TProduct>, AuthContext> {
