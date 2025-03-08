@@ -1,7 +1,7 @@
 import { TVendor } from "../../../data/entity/vendor";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { EBusinessTypes } from "../../../data/enum/vendor";
 import { CreateVendorDTO, CreateVendorSchema } from "../../../data/dto/vendor";
 import { IVendorRepository } from "../repository";
