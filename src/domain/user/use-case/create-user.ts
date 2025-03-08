@@ -1,9 +1,9 @@
 import { CreateUserDTO, CreateUserSchema } from "../../../data/dto/user";
 import { TUser } from "../../../data/entity/user";
-import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { Role } from "../../../data/enum/user";
 import bcrypt from "bcrypt"
 import { logger } from "../../../util/logger";
