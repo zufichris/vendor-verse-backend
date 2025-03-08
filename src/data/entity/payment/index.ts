@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ECurrency } from "../../../global/enum";
+import { ECurrency } from "../../../shared/enum";
 
 export const PaymentStatusEnum = z.enum([
     "PENDING",
