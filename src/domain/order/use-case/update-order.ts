@@ -1,7 +1,7 @@
 import { TOrder } from "../../../data/entity/order";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { UpdateOrderDTO, UpdateOrderSchema } from "../../../data/dto/order";
 import { IOrderRepository } from "../repository";
 
