@@ -1,7 +1,7 @@
 import { TPayment } from "../../../data/entity/payment";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 import { IPaymentRepository } from "../repository";
 
