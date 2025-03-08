@@ -1,7 +1,7 @@
 import { TShipping } from "../../../data/entity/shipping";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { CreateShippingDTO, CreateShippingSchema } from "../../../data/dto/shipping";
 import { IShippingRepository } from "../repository";
 
