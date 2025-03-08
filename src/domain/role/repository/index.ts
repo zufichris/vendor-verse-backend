@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { ID, IQueryFilters, IQueryResult } from "../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../shared/entity";
 import { TRole, TRolePermission } from "../../../data/entity/role";
-import { IBaseRepository } from "../../../global/repository";
+import { IBaseRepository } from "../../../shared/repository";
 
 
 export interface IRoleRepository extends IBaseRepository<TRole> {
