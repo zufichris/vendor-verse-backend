@@ -1,7 +1,7 @@
 import { TOrder } from "../../../data/entity/order";
-import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../shared/use-case";
 import { IOrderRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
 export class GetOrderUseCase implements BaseUseCase<{ orderId: string; }, TOrder, AuthContext> {
