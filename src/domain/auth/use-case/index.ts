@@ -1,9 +1,9 @@
 import JWT from 'jsonwebtoken';
 import bcrypt from "bcrypt"
 import { TUser } from "../../../data/entity/user";
-import { ID } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
-import { handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { ID } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { validateData } from "../../../util/functions";
 import { logger } from "../../../util/logger";
 import { IUserRepository } from "../../user/repository";
