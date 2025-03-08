@@ -1,10 +1,10 @@
 import { TRole } from "../../../data/entity/role";
-import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../shared/use-case";
 import { IRoleRepository } from "../repository";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { logger } from "../../../util/logger";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
 
 export class QueryRolesUseCase implements BaseUseCase<IQueryFilters<TRole>, IQueryResult<TRole>, AuthContext> {
     constructor(private readonly roleRepository: IRoleRepository) { }
