@@ -1,8 +1,8 @@
 import { TOrder } from "../../../data/entity/order";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
-import { getPermission, hasRequiredPermissions} from "../../../util/functions";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
+import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 import { IOrderRepository } from "../repository";
 
 export class QueryOrdersUseCase implements BaseUseCase<IQueryFilters<TOrder>, IQueryResult<TOrder>, AuthContext> {
