@@ -1,4 +1,4 @@
-import { BaseUseCase, UseCaseResult, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, AuthContext } from "../../../shared/use-case";
 import { TRolePermission } from "../../../data/entity/role";
 import { IRoleRepository } from "../repository";
 import { logger } from "../../../util/logger";
