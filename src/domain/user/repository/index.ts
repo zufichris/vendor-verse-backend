@@ -1,6 +1,6 @@
 import mongoose, { FilterQuery } from "mongoose";
-import { IBaseRepository } from "../../../global/repository";
-import { ID, IQueryFilters, IQueryResult } from "../../../global/entity";
+import { IBaseRepository } from "../../../shared/repository";
+import { ID, IQueryFilters, IQueryResult } from "../../../shared/entity";
 import { TUser } from "../../../data/entity/user";
 import { TAddress } from "../../../data/entity/address";
 
