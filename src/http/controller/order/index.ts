@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { validateData } from "../../../util/functions";
-import { IResponseData, IResponseDataPaginated, IQueryFilters } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
+import { IResponseData, IResponseDataPaginated, IQueryFilters } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
 import OrderUseCase from "../../../domain/order/use-case";
 import { OrderRepositoryImpl } from "../../../data/orm/repository-implementation/order";
 import { CreateOrderDTO, CreateOrderSchema, UpdateOrderDTO, UpdateOrderSchema } from "../../../data/dto/order";
