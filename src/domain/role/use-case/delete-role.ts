@@ -1,6 +1,6 @@
-import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../shared/use-case";
 import { IRoleRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { logger } from "../../../util/logger";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
