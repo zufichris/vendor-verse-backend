@@ -1,11 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthUseCaseRepository } from "../../../domain/auth/repository";
 import RoleUseCase from "../../../domain/role/use-case";
-import { AppError } from "../../../global/error";
-import { AuthContext } from "../../../global/use-case";
-import { EStatusCodes } from "../../../global/enum";
-import { getPermission, hasRequiredPermissions } from "../../../util/functions";
-import { EPermissionResource, EPermissionValue, TRolePermission } from "../../../data/entity/role";
+import { AppError } from "../../../shared/error";
+import { AuthContext } from "../../../shared/use-case";
+import { EStatusCodes } from "../../../shared/enum";
+import { EPermissionAction, EPermissionResource, TRolePermission } from "../../../data/entity/role";
 import AuthUseCase from "../../../domain/auth/use-case";
 import { UserRepositoryImpl } from "../../../data/orm/repository-implementation/user";
 import { UserModel } from "../../../data/orm/model/user";
@@ -13,6 +12,7 @@ import { CreateUserUseCase } from "../../../domain/user/use-case/create-user";
 import { RoleModel } from "../../../data/orm/model/role";
 import { RoleRepositoryImpl } from "../../../data/orm/repository-implementation/role";
 import { z } from "zod";
+import { hasPermission } from "../../../util/functions";
 
 export class AuthMiddleWare {
   constructor(
@@ -26,52 +26,67 @@ export class AuthMiddleWare {
   async requireAuth(req: Request, _: Response, next: NextFunction) {
     try {
       const token = this.getToken(req, "access_token");
-      if (!token) {
+      if (!token || typeof token !== 'string') {
         throw new AppError({
-          message: "Authentication required",
+          message: "Access token is required",
           type: "Auth Error",
-          statusCode: 401,
+          statusCode: EStatusCodes.enum.unauthorized,
         });
       }
-      if (!token.startsWith("Bearer ")) {
-        throw new AppError({
-          message: "Invalid authentication format",
-          type: "Auth Error",
-          statusCode: 401,
-        });
+      let jwtToken;
+      if (token.startsWith("Bearer ")) {
+        jwtToken = token.split(" ")[1];
+      } else {
+        jwtToken = token;
       }
-      const decoded = this.authUseCase.decodeJWT(token.split(" ")[1]);
+      const decoded = this.authUseCase.decodeJWT(jwtToken);
       if (!decoded) {
         throw new AppError({
-          message: "Invalid token",
+          message: "Invalid or expired token",
           type: "Auth Error",
-          statusCode: 401,
+          statusCode: EStatusCodes.enum.unauthorized,
         });
       }
       req.user = decoded as AuthContext;
       next();
     } catch (error) {
-      next(
-        new AppError({
-          message: "Authentication failed",
-          type: "Auth Error",
-          statusCode: 401,
-        })
-      );
+      next(error);
     }
   }
-  requirePermission(resource: z.infer<typeof EPermissionResource>, action: z.infer<typeof EPermissionValue>) {
+
+  requirePermission(resource: z.infer<typeof EPermissionResource>, action: z.infer<typeof EPermissionAction>) {
     return async (req: Request, _: Response, next: NextFunction) => {
       try {
-    const requiredPermission = getPermission(resource, action)
         if (!req.user?.userId || !req.user.roles || req.user.roles.length === 0) {
-          throw new AppError({ message: "Unauthorized", statusCode: EStatusCodes.enum.unauthorized });
+          throw new AppError({
+            message: "Invalid authentication context: missing user ID or roles",
+            type: "Auth Error",
+            statusCode: EStatusCodes.enum.unauthorized,
+          });
         }
-        const userPermissions = await this.getUserPermissions(req.user);
+
+        const result = await this.roleUseCase.getPermissions.execute(req.user.roles);
+        if (!result.success) {
+          throw new AppError({
+            message: "Failed to fetch user permissions",
+            type: "Server Error",
+            statusCode: EStatusCodes.enum.internalServerError,
+          });
+        }
+        const userPermissions: TRolePermission[] = result.data;
         req.user.permissions = userPermissions;
-        if (!hasRequiredPermissions(requiredPermission, userPermissions)) {
+
+        const permitted = hasPermission({
+          resource: { id: resource, ownerId: undefined },
+          requestedAction: action,
+          userId: req.user.userId,
+          userPermissions,
+        });
+
+        if (!permitted) {
           throw new AppError({
             message: "Forbidden: insufficient permissions",
+            type: "Permission Error",
             statusCode: EStatusCodes.enum.forbidden,
           });
         }
@@ -80,29 +95,6 @@ export class AuthMiddleWare {
         next(error);
       }
     };
-  }
-
-  private async getUserPermissions(context: Partial<AuthContext>): Promise<TRolePermission[]> {
-    if (!context.userId || !context.roles || context.roles.length === 0) {
-      throw new Error("Unauthorized Access");
-    }
-    const rolesData = await this.roleUseCase.query.execute({
-      filter: { name: { "$in": context.roles } }
-    });
-    if (!rolesData.success) {
-      throw new Error(rolesData.error);
-    }
-    const permissionSet = new Set<TRolePermission>();
-    rolesData.data.data.forEach(role => {
-      role.permissions.forEach(permission => {
-        permissionSet.add(permission);
-      });
-    });
-    const permissions = Array.from(permissionSet)
-    if (!permissions.length) {
-      throw new Error("Insufficient Permissions to perform this action");
-    }
-    return permissions;
   }
 
   private getToken(req: Request, tokenName: "access_token" | "refresh_token") {
