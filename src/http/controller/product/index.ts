@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { ProductRepositoryImpl } from "../../../data/orm/repository-implementation/product";
 import { ProductModel } from "../../../data/orm/model/product";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { TProduct } from "../../../data/entity/product";
-import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../global/entity";
+import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../shared/entity";
 import { CreateProductDTO, UpdateProductDTO, CreateProductSchema, UpdateProductSchema } from "../../../data/dto/product";
 import ProductUseCase from "../../../domain/product/use-case";
 
@@ -34,7 +34,7 @@ export class ProductControllers {
                 return;
             }
 
-            const result = await this.productUseCase.create.execute(validate.data,req.user);
+            const result = await this.productUseCase.create.execute(validate.data, req.user);
 
             if (!result.success) {
                 const data = {
@@ -139,7 +139,7 @@ export class ProductControllers {
             const result = await this.productUseCase.update.execute({
                 data: req.body,
                 id: req.body.id
-            },req.user);
+            }, req.user);
 
             if (!result.success) {
                 const data = {
@@ -195,7 +195,7 @@ export class ProductControllers {
     async deleteProduct(req: Request, res: Response, next: NextFunction) {
         try {
             const productId = req.params.productId;
-            const result = await this.productUseCase.delete.execute({ id: productId },req.user);
+            const result = await this.productUseCase.delete.execute({ id: productId }, req.user);
 
             if (!result.success) {
                 const data = {
