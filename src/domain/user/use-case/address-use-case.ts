@@ -1,8 +1,8 @@
 import { AddressSchema, TAddress } from "../../../data/entity/address";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
-import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
+import { hasPermission, validateData } from "../../../util/functions";
 import { logger } from "../../../util/logger";
 import { IUserRepository } from "../repository";
 
@@ -12,9 +12,18 @@ export class GetAddressesUseCase implements BaseUseCase<IQueryFilters<TAddress>,
         try {
             if (!context?.userId)
                 return handleUseCaseError({ error: "Unauthorized", title: "Get Address", status: EStatusCodes.enum.unauthorized })
-            const REQUIRED_PERMISSION = getPermission("address", "manage_own");
-            const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
-            if (!hasPermission) {
+
+            const isPermitted = hasPermission({
+                requestedAction: "view",
+                resource: {
+                    id: "address",
+                    ownerId: undefined
+                },
+                userId: context.userId,
+                userPermissions: context.permissions
+            })
+
+            if (!isPermitted) {
                 return handleUseCaseError({
                     error: "Forbidden: You do not have permission to view address.",
                     title: "View Address - Authorization",
