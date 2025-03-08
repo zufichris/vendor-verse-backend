@@ -1,7 +1,7 @@
 import { TShipping } from "../../../data/entity/shipping";
-import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../shared/use-case";
 import { IShippingRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 
 export interface GetShippingInput {
     shippingId: string;
