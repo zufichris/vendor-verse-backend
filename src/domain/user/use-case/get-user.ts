@@ -1,8 +1,8 @@
 import { TUser } from "../../../data/entity/user";
-import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
-import { getPermission, hasRequiredPermissions } from "../../../util/functions";
+import { EStatusCodes } from "../../../shared/enum";
+import { hasPermission } from "../../../util/functions";
 
 export class GetUserUseCase implements BaseUseCase<{ userId?: string, email?: string, custId?: string }, TUser, AuthContext> {
     constructor(private readonly userRepository: IUserRepository) { }
@@ -16,26 +16,32 @@ export class GetUserUseCase implements BaseUseCase<{ userId?: string, email?: st
                     status: EStatusCodes.enum.unauthorized
                 });
             }
-
-           const REQUIRED_PERMISSION = getPermission("user", "view_own");
-                       const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
-                       if (!hasPermission) {
-                           return handleUseCaseError({
-                               error: "Forbidden: You do not have permission to create roles.",
-                               title: "Create Role - Authorization",
-                               status: EStatusCodes.enum.forbidden,
-                           });
-                       }
-
-            let data: TUser | null = null;
-
-            if (input.userId) {
-                data = await this.userRepository.findById(input.userId);
-            } else if (input.email) {
-                data = await this.userRepository.findByEmail(input.email);
-            } else if (input.custId) {
-                data = await this.userRepository.findOne({ custId: input.custId });
+            if (!input.userId) {
+                return handleUseCaseError({
+                    error: "userId is required to view user.",
+                    title: "Get User",
+                    status: EStatusCodes.enum.badRequest
+                });
             }
+
+            const isPermitted = hasPermission({
+                requestedAction: "view",
+                resource: {
+                    id: "user",
+                    ownerId: input.userId
+                },
+                userId: context.userId,
+                userPermissions: context.permissions
+            })
+            if (!isPermitted) {
+                return handleUseCaseError({
+                    error: "Forbidden: You do not have permission to create roles.",
+                    title: "Create Role - Authorization",
+                    status: EStatusCodes.enum.forbidden,
+                });
+            }
+
+            let data = await this.userRepository.findById(input.userId);
 
             if (!data) {
                 return handleUseCaseError({
@@ -46,11 +52,11 @@ export class GetUserUseCase implements BaseUseCase<{ userId?: string, email?: st
             }
 
             // Never expose password or other sensitive information
-            const { password, ...safeUserData } = data;
+            delete data?.password
 
             return {
                 success: true,
-                data: safeUserData,
+                data,
             };
         } catch (error: any) {
             return handleUseCaseError({
