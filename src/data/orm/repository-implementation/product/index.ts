@@ -1,4 +1,4 @@
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { getQueryMetaData, getUnitId } from "../../../../util/functions";
 import { logger } from "../../../../util/logger";
 import { ProductDocument, ProductModel } from "../../model/product";
