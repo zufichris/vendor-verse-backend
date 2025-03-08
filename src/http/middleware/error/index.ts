@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../../../global/error";
-import { EStatusCodes } from "../../../global/enum";
-import { IResponseData } from "../../../global/entity";
+import { AppError } from "../../../shared/error";
+import { EStatusCodes } from "../../../shared/enum";
+import { IResponseData } from "../../../shared/entity";
 import { env } from "../../../config/env";
 
 export const notFound = (req: Request, res: Response, next: NextFunction) => {
@@ -21,7 +21,7 @@ export const errorHandler = (
     res: Response,
     _: NextFunction
 ) => {
-    const statusCode = err?.error?.status ?? EStatusCodes.enum.internalServerError;
+    const statusCode = err?.error?.statusCode ?? EStatusCodes.enum.internalServerError;
     const message = err?.message ?? "An unexpected error occurred.";
     const description = err?.error?.description ?? 'An unexpected error occurred.';
     const type = err.error?.type ?? "Error";
@@ -40,6 +40,5 @@ export const errorHandler = (
         type: type,
     };
 
-    console.error(err);
     res.status(statusCode).json(errorResponse);
 };
