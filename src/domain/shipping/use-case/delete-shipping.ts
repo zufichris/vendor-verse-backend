@@ -1,6 +1,6 @@
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { IShippingRepository } from "../repository";
 
 export class DeleteShippingUseCase implements BaseUseCase<string, boolean, AuthContext> {
