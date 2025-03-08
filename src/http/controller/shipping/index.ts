@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { validateData } from "../../../util/functions";
-import { IResponseData, IResponseDataPaginated, IQueryFilters } from "../../../global/entity";
-import { EStatusCodes } from "../../../global/enum";
+import { IResponseData, IResponseDataPaginated, IQueryFilters } from "../../../shared/entity";
+import { EStatusCodes } from "../../../shared/enum";
 import ShippingUseCase from "../../../domain/shipping/use-case";
 import { ShippingRepositoryImpl } from "../../../data/orm/repository-implementation/shipping";
 import { CreateShippingDTO, CreateShippingSchema, UpdateShippingDTO, UpdateShippingSchema } from "../../../data/dto/shipping";
@@ -31,7 +31,7 @@ export class ShippingControllers {
                 return;
             }
 
-            const result = await this.shippingUseCase.create.execute(validate.data,req.user!);
+            const result = await this.shippingUseCase.create.execute(validate.data, req.user!);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, result.error ?? "Shipping creation failed"),
@@ -58,7 +58,7 @@ export class ShippingControllers {
     async getShipping(req: Request, res: Response, next: NextFunction) {
         try {
             const shippingId = req.params.shippingId;
-            const result = await this.shippingUseCase.get.execute({ shippingId },req.user);
+            const result = await this.shippingUseCase.get.execute({ shippingId }, req.user);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, result.error ?? "Shipping not found"),
@@ -121,7 +121,7 @@ export class ShippingControllers {
                 return;
             }
 
-            const result = await this.shippingUseCase.update.execute(validate.data,req.user!);
+            const result = await this.shippingUseCase.update.execute(validate.data, req.user!);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, result.error ?? "Shipping update failed"),
@@ -146,7 +146,7 @@ export class ShippingControllers {
     async deleteShipping(req: Request, res: Response, next: NextFunction) {
         try {
             const shippingId = req.params.shippingId;
-            const result = await this.shippingUseCase.delete.execute(shippingId,req.user!);
+            const result = await this.shippingUseCase.delete.execute(shippingId, req.user!);
             if (!result.success) {
                 const data = {
                     ...this.generateMetadata(req, result.error ?? "Shipping cancellation failed"),
