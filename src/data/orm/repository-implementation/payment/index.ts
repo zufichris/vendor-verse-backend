@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { PaymentRepository } from "../../../../domain/payment/repository";
 import { PaymentDocument } from "../../model/payment";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { TPayment } from "../../../entity/payment";
 import { logger } from "../../../../util/logger";
 import { getQueryMetaData, getUnitId } from "../../../../util/functions";
