@@ -1,12 +1,12 @@
 import QueryString from "qs";
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../../../global/error";
+import { AppError } from "../../../shared/error";
 import { OAuthProviders } from "../../../data/enum/auth";
 import { GoogleAuthSchema, TGoogleAuthConfig } from "../../../config/google";
 import { validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { env } from "../../../config/env";
-import { IResponseData } from "../../../global/entity";
+import { IResponseData } from "../../../shared/entity";
 import { SocialSignInDTO } from "../../../data/dto/auth";
 
 interface GoogleProfile {
