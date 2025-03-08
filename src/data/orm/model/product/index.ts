@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { EDimensionUnit, EProductStatus, ProductSchema, TDimension, TImage, TInventory, TProduct, TSeo, TVariant } from "../../../entity/product";
-import { ECurrency } from "../../../../global/enum";
+import { ECurrency } from "../../../../shared/enum";
 import { validateBeforeSave } from "../../../../util/functions";
 
 const PriceSchema = new mongoose.Schema<Record<string, unknown> & Document>(
