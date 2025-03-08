@@ -1,6 +1,6 @@
 import { TShipping } from "../../../data/entity/shipping";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IShippingRepository } from "../repository";
 
 export class QueryShippingsUseCase implements BaseUseCase<IQueryFilters<TShipping>, IQueryResult<TShipping>, AuthContext> {
