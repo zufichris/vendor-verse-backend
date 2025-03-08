@@ -1,6 +1,6 @@
 import { TVendor } from "../../../data/entity/vendor";
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IVendorRepository } from "../repository";
 
 export class VerifyVendorUseCase implements BaseUseCase<{ id: string, status: "APPROVED" | "REJECTED", reason?: string }, TVendor, AuthContext> {
