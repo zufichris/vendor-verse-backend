@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 import { PaymentMethodRepository } from "../../../../domain/payment-method/repository";
 import { PaymentMethodDocument } from "../../model/payment-method";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { TPaymentMethod } from "../../../entity/payment-method";
 import { logger } from "../../../../util/logger";
 import { getQueryMetaData, getUnitId } from "../../../../util/functions";
 
 export class PaymentMethodRepositoryImpl implements PaymentMethodRepository {
-    constructor(private readonly paymentMethodModel: mongoose.Model<PaymentMethodDocument>) {}
+    constructor(private readonly paymentMethodModel: mongoose.Model<PaymentMethodDocument>) { }
 
     async create(data: Partial<TPaymentMethod>): Promise<TPaymentMethod | null> {
         try {
