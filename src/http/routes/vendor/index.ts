@@ -4,18 +4,18 @@ import { Role } from "../../../data/enum/user"
 import { vendorControllers } from "../../controller/vendor"
 const router = express.Router()
 
-router.use(authMiddleware.requireAuth)
+router.use(authMiddleware.requireAuth, authMiddleware.requirePermission("vendor", "manage"))
 
 router.route("/")
-    .get(authMiddleware.requirePermission("vendor", "manage"), vendorControllers.queryVendors)
+    .get(vendorControllers.queryVendors)
     .post(vendorControllers.createVendor)
 
-router.use(authMiddleware.requirePermission("vendor", "manage_own"),).route('/:vendId')
+router.route('/:vendId')
     .get(vendorControllers.getVendor)
     .patch(vendorControllers.updateVendor)
     .delete(vendorControllers.deleteVendor)
 
-router.use(authMiddleware.requirePermission("vendor", "manage"),).route("/:vendId/verify")
+router.route("/:vendId/verify")
     .patch(vendorControllers.verifyVendor)
 
 export default router
