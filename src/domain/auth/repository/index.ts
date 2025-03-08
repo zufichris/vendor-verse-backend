@@ -1,6 +1,6 @@
 import { TUser } from '../../../data/entity/user';
-import { UseCaseResult } from '../../../global/use-case';
-import { ID } from '../../../global/entity';
+import { UseCaseResult } from '../../../shared/use-case';
+import { ID } from '../../../shared/entity';
 import { SignInDTO, SignUpDTO, SocialSignInDTO } from '../../../data/dto/auth';
 
 export type TokenPair = { accessToken: string, refreshToken: string }
