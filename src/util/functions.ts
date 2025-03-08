@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 import z from "zod";
-import { logger } from "./logger";
-import { Role } from "../data/enum/user";
-import { EPermissionResource, EPermissionValue, TRole, TRolePermission } from "../data/entity/role";
+import { EPermissionAction, EPermissionResource, TRolePermission } from "../data/entity/role";
 
 /**
  * Converts data to Array
@@ -157,34 +155,43 @@ export function getQueryMetaData({ page, filterCount, limit, totalCount }: {
   })
 }
 
-
 /**
- * checks if user has required permissions to access a resource
- * @param requiredPermission - permission to be checked
- * @param user permission
+ * Checks if user has required permissions to access a resource
+ * @param userPermissions - loggedIn User Permissions
+ * @param resource - Resource to access
+ * @param requestedAction - Action to be performed on the resource
+ * @param userId - ID of the logged-in user
  * @returns boolean
  */
-export function hasRequiredPermissions(
-  requiredPermission: TRolePermission,
-  permissions: TRolePermission[]
-): boolean {
-  if (permissions.includes("*")) {
-    return true;
+export function hasPermission({
+  requestedAction,
+  resource,
+  userId,
+  userPermissions
+}: {
+  userPermissions: TRolePermission[],
+  resource: { id: z.infer<typeof EPermissionResource>; ownerId?: string },
+  requestedAction: z.infer<typeof EPermissionAction>,
+  userId: string
+}): boolean {
+  const matchPermission = userPermissions.find(
+    perm => perm.resource === resource.id || perm.resource === "*"
+  );
+
+  if (!matchPermission) {
+    return false;
   }
 
-  if (permissions.includes(requiredPermission)) {
-    return true;
+  if (matchPermission.actions.includes("manage"))
+    matchPermission.actions = [...matchPermission.actions, "create", "view", "delete", "update"]
+
+  if (matchPermission.resource === "*" && matchPermission.scope === "*") {
+    return matchPermission.actions.includes(requestedAction) || matchPermission.actions.includes("*");
   }
 
-  const [resource] = requiredPermission.split(":");
-  const resourceWildcard = `${resource}:*`;
-  if (permissions.includes(resourceWildcard)) {
-    return true;
+  if ((resource.ownerId && matchPermission.scope !== "*") && resource.ownerId !== userId) {
+    return false;
   }
 
-  return false;
-}
-
-export function getPermission(resource: z.infer<typeof EPermissionResource>, action: z.infer<typeof EPermissionValue>): string {
-  return `${resource}:${action}`
+  return matchPermission.actions.includes(requestedAction) || matchPermission.actions.includes("*");
 }
