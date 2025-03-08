@@ -1,7 +1,7 @@
 import { TPaymentMethod } from "../../../data/entity/payment-method";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { UpdatePaymentMethodDTO, UpdatePaymentMethodSchema } from "../../../data/dto/payment-method";
 import { IPaymentMethodRepository } from "../repository";
 
