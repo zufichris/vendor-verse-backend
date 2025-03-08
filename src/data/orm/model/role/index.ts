@@ -1,8 +1,28 @@
 import mongoose from "mongoose";
-import { defaultPermissions, RoleSchema, TRole } from "../../../entity/role";
+import { defaultPermissions, EPermissionAction, EPermissionResource, EPermissionScope, RoleSchema, TRole, TRolePermission } from "../../../entity/role";
 import { validateBeforeSave } from "../../../../util/functions";
 
 export type RoleDocument = TRole & mongoose.Document
+
+const PermissionSchema = new mongoose.Schema<TRolePermission & mongoose.Document>({
+    resource: {
+        type: String,
+        enum: EPermissionResource.Enum,
+    },
+    actions: [
+        {
+            type: String,
+            enum: EPermissionAction.Enum
+        }
+    ],
+    scope: {
+        type: String,
+        enum: EPermissionScope.Enum
+    }
+}, {
+    _id: false,
+    versionKey: false
+})
 
 const schema = new mongoose.Schema<RoleDocument>({
     name: {
@@ -15,9 +35,10 @@ const schema = new mongoose.Schema<RoleDocument>({
         default: 1
     },
     permissions: [{
-        type: String,
+        type: PermissionSchema,
         default: defaultPermissions
-    }],
+    }
+    ]
 }, {
     timestamps: true,
     toJSON: {
