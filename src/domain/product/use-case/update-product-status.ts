@@ -1,6 +1,6 @@
 import { EProductStatus, TProduct } from "../../../data/entity/product";
-import { EStatusCodes } from "../../../global/enum";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { EStatusCodes } from "../../../shared/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IProductRepository } from "../repository";
 
 export class UpdateProductStatusUseCase implements BaseUseCase<{ id: string; status: string }, TProduct | null, AuthContext> {
