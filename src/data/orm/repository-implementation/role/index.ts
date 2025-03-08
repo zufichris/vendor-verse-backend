@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { RoleRepository } from "../../../../domain/role/repository";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { logger } from "../../../../util/logger";
 import { TRole, TRolePermission } from "../../../entity/role";
 import { RoleDocument } from "../../model/role";
