@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ECurrency } from "../../../global/enum";
+import { ECurrency } from "../../../shared/enum";
 import { PaymentSchema } from "../payment";
 import { ShippingSchema } from "../shipping";
 
