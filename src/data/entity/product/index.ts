@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ECurrency, ELanguageCode } from "../../../global/enum";
+import { ECurrency, ELanguageCode } from "../../../shared/enum";
 
 export const EProductStatus = z.enum(["DRAFT", "ACTIVE", "INACTIVE", "ARCHIVED"])
 export const EDimensionUnit = z.enum(["CM", "INCH"]);
