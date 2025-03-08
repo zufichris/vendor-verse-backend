@@ -1,5 +1,5 @@
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
-import { EStatusCodes } from "../../../global/enum";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
+import { EStatusCodes } from "../../../shared/enum";
 import { IPaymentRepository } from "../repository";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
@@ -12,14 +12,14 @@ export class DeletePaymentUseCase implements BaseUseCase<string, boolean, AuthCo
                 return handleUseCaseError({ title: "Forbidden", error: "User not authenticated", status: EStatusCodes.enum.forbidden });
             }
             const REQUIRED_PERMISSION = getPermission("payment", "delete");
-                        const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
-                        if (!hasPermission) {
-                            return handleUseCaseError({
-                                error: "Forbidden: You do not have permission to delete payments.",
-                                title: "Delete Payment - Authorization",
-                                status: EStatusCodes.enum.forbidden,
-                            });
-                        }
+            const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
+            if (!hasPermission) {
+                return handleUseCaseError({
+                    error: "Forbidden: You do not have permission to delete payments.",
+                    title: "Delete Payment - Authorization",
+                    status: EStatusCodes.enum.forbidden,
+                });
+            }
             const payment = await this.paymentRepository.findOne({ id });
             if (!payment) {
                 return handleUseCaseError({ title: "Delete Payment", error: "Payment not found", status: EStatusCodes.enum.notFound });
