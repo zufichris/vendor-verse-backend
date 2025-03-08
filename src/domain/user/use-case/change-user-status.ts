@@ -1,8 +1,8 @@
 import { TUser } from "../../../data/entity/user";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
-import { ID } from "../../../global/entity";
+import { EStatusCodes } from "../../../shared/enum";
+import { ID } from "../../../shared/entity";
 import { getPermission, hasRequiredPermissions } from "../../../util/functions";
 
 export class ChangeUserStatusUseCase implements BaseUseCase<{ userId: string, isActive: boolean }, TUser, AuthContext> {
