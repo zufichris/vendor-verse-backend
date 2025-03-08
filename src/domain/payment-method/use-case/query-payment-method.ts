@@ -1,6 +1,6 @@
 import { TPaymentMethod } from "../../../data/entity/payment-method";
-import { IQueryFilters, IQueryResult } from "../../../global/entity";
-import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../global/use-case";
+import { IQueryFilters, IQueryResult } from "../../../shared/entity";
+import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IPaymentMethodRepository } from "../repository";
 
 export class QueryPaymentMethodUseCase implements BaseUseCase<IQueryFilters<TPaymentMethod>, IQueryResult<TPaymentMethod>, AuthContext> {
