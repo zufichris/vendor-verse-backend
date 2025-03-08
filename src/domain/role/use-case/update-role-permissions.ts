@@ -1,9 +1,9 @@
 import { UpdateRoleDTO, UpdateRoleSchema } from "../../../data/dto/role";
 import { TRole } from "../../../data/entity/role";
-import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, handleUseCaseError, UseCaseResult, AuthContext } from "../../../shared/use-case";
 import { IRoleRepository } from "../repository";
 import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 import { logger } from "../../../util/logger";
 
 export class UpdateRolePermissionsUseCase implements BaseUseCase<UpdateRoleDTO, TRole, AuthContext> {
