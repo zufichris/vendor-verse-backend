@@ -1,7 +1,7 @@
 import { TPaymentMethod } from "../../../data/entity/payment-method";
-import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../global/use-case";
+import { BaseUseCase, UseCaseResult, handleUseCaseError, AuthContext } from "../../../shared/use-case";
 import { IPaymentMethodRepository } from "../repository";
-import { EStatusCodes } from "../../../global/enum";
+import { EStatusCodes } from "../../../shared/enum";
 
 export interface GetPaymentMethodInput {
     paymentMethodId: string;
