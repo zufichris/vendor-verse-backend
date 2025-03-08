@@ -1,5 +1,5 @@
 import { UserRepository } from "../../../../domain/user/repository";
-import { ID, IQueryFilters, IQueryResult } from "../../../../global/entity";
+import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
 import { getQueryMetaData, getUnitId, toArray } from "../../../../util/functions";
 import { UserDocument, UserModel } from "../../model/user";
 import { logger } from "../../../../util/logger";
