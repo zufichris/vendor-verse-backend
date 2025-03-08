@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ECurrency } from "../../../global/enum";
+import { ECurrency } from "../../../shared/enum";
 
 export const PaymentMethodSchema = z.object({
     id: z.string().optional(),
