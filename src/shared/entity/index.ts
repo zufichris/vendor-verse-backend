@@ -12,7 +12,6 @@ interface ResErr extends BaseResponseData {
   success: false
   error?: { message: string };
   data?: null
-  stack?: any;
 }
 interface ResSuccess<TData> extends BaseResponseData {
   success: true,
@@ -20,8 +19,6 @@ interface ResSuccess<TData> extends BaseResponseData {
   redirect?: {
     path: string;
   };
-  fieldsModified?: number;
-  documentsModified?: number;
 }
 
 

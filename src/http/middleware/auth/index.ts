@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthUseCaseRepository } from "../../../domain/auth/repository";
 import RoleUseCase from "../../../domain/role/use-case";
-import { AppError } from "../../../shared/error";
+import { throwError } from "../../../shared/error";
 import { AuthContext } from "../../../shared/use-case";
 import { EStatusCodes } from "../../../shared/enum";
 import { EPermissionAction, EPermissionResource, TRolePermission } from "../../../data/entity/role";
@@ -27,11 +27,13 @@ export class AuthMiddleWare {
     try {
       const token = this.getToken(req, "access_token");
       if (!token || typeof token !== 'string') {
-        throw new AppError({
-          message: "Access token is required",
-          type: "Auth Error",
+        throwError({
+          message: "Unauthorized",
+          type: "Auth",
           statusCode: EStatusCodes.enum.unauthorized,
+          description: "Missing access token",
         });
+        return;
       }
       let jwtToken;
       if (token.startsWith("Bearer ")) {
@@ -41,13 +43,25 @@ export class AuthMiddleWare {
       }
       const decoded = this.authUseCase.decodeJWT(jwtToken);
       if (!decoded) {
-        throw new AppError({
-          message: "Invalid or expired token",
-          type: "Auth Error",
+        throwError({
+          message: "Unauthorized",
+          type: "Auth",
           statusCode: EStatusCodes.enum.unauthorized,
+          description: "Invalid or expired access token",
         });
+        return;
       }
-      req.user = decoded as AuthContext;
+      if (!decoded.id || !decoded.roles) {
+        throwError({
+          message: "Unauthorized",
+          type: "Auth",
+          statusCode: EStatusCodes.enum.unauthorized,
+          description: "Invalid authentication context: missing user ID or roles",
+        });
+        return;
+      }
+
+      req.user = { ...decoded, userId: decoded.id } as AuthContext;
       next();
     } catch (error) {
       next(error);
@@ -58,21 +72,26 @@ export class AuthMiddleWare {
     return async (req: Request, _: Response, next: NextFunction) => {
       try {
         if (!req.user?.userId || !req.user.roles || req.user.roles.length === 0) {
-          throw new AppError({
-            message: "Invalid authentication context: missing user ID or roles",
-            type: "Auth Error",
+          throwError({
+            message: "Unauthorized",
+            type: "Auth",
             statusCode: EStatusCodes.enum.unauthorized,
+            description: "Invalid authentication context: missing user ID or roles",
           });
+          return;
         }
 
         const result = await this.roleUseCase.getPermissions.execute(req.user.roles);
         if (!result.success) {
-          throw new AppError({
-            message: "Failed to fetch user permissions",
-            type: "Server Error",
-            statusCode: EStatusCodes.enum.internalServerError,
+          throwError({
+            message: "Unauthorized",
+            type: "Auth",
+            statusCode: EStatusCodes.enum.unauthorized,
+            description: "Failed to fetch user permissions",
           });
+          return;
         }
+
         const userPermissions: TRolePermission[] = result.data;
         req.user.permissions = userPermissions;
 
@@ -84,11 +103,13 @@ export class AuthMiddleWare {
         });
 
         if (!permitted) {
-          throw new AppError({
-            message: "Forbidden: insufficient permissions",
-            type: "Permission Error",
-            statusCode: EStatusCodes.enum.forbidden,
+          throwError({
+            message: "Unauthorized",
+            type: "Auth",
+            statusCode: EStatusCodes.enum.unauthorized,
+            description: "Insufficient permissions for requested action",
           });
+          return;
         }
         next();
       } catch (error) {

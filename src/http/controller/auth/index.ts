@@ -11,6 +11,8 @@ import { UserModel } from "../../../data/orm/model/user";
 import { CreateUserUseCase } from "../../../domain/user/use-case/create-user";
 import { IAuthUseCaseRepository } from "../../../domain/auth/repository";
 import { SignInDTO, SignInSchema, SignUpDTO, SignUpSchema, SocialSignInDTO, SocialSignInSchema } from "../../../data/dto/auth";
+import { throwError } from "../../../shared/error";
+import { logger } from "../../../util/logger";
 
 export class AuthControllers {
   public googleAuthControllers = new GoogleAuthControllers(GoogleAuthConfig);
@@ -37,24 +39,24 @@ export class AuthControllers {
     try {
       const validation = validateData<SignUpDTO>(req.body, SignUpSchema);
       if (!validation.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, `Invalid Data-${validation.error}`),
-          status: EStatusCodes.enum.badRequest,
-          success: false,
-        };
-        res.status(EStatusCodes.enum.badRequest).json(data);
-        return
+        throwError({
+          message: "Validation failed",
+          description: validation.error,
+          statusCode: EStatusCodes.enum.badRequest,
+          type: "Validation",
+        });
+        return;
       }
 
       const result = await this.authUseCase.signUp(validation.data);
       if (!result.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, result.error),
-          status: result.status ?? EStatusCodes.enum.conflict,
-          success: false,
-        };
-        res.status(data.status).json(data);
-        return
+        throwError({
+          message: "Sign up failed",
+          description: result.error,
+          statusCode: result.status ?? EStatusCodes.enum.conflict,
+          type: "Conflict",
+        });
+        return;
       }
 
       const data: IResponseData<TUser> = {
@@ -65,30 +67,33 @@ export class AuthControllers {
       };
       res.status(data.status).json(data);
     } catch (error) {
+      logger.error(`Error in signUp:`, error);
       next(error);
     }
   }
+
   async signIn(req: Request, res: Response, next: NextFunction) {
     try {
       const validation = validateData<SignInDTO>(req.body, SignInSchema);
       if (!validation.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, "Invalid email or password"),
-          status: EStatusCodes.enum.badRequest,
-          success: false,
-        };
-        res.status(EStatusCodes.enum.badRequest).json(data);
-        return
+        throwError({
+          message: "Validation failed",
+          description: validation.error,
+          statusCode: EStatusCodes.enum.badRequest,
+          type: "Validation",
+        });
+        return;
       }
+
       const result = await this.authUseCase.signIn(validation.data);
       if (!result.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, result.error),
-          status: result.status ?? EStatusCodes.enum.unauthorized,
-          success: false,
-        };
-        res.status(data.status).json(data);
-        return
+        throwError({
+          message: "Sign in failed",
+          description: result.error,
+          statusCode: result.status ?? EStatusCodes.enum.unauthorized,
+          type: "Auth",
+        });
+        return;
       }
 
       const data: IResponseData<TUser> = {
@@ -106,36 +111,33 @@ export class AuthControllers {
         .status(data.status)
         .json(data);
     } catch (error) {
+      logger.error(`Error in signIn:`, error);
       next(error);
     }
   }
 
   async socialSignIn(req: Request, res: Response, next: NextFunction) {
     try {
-      const validation = validateData<SocialSignInDTO>(
-        req.body,
-        SocialSignInSchema
-      );
+      const validation = validateData<SocialSignInDTO>(req.body, SocialSignInSchema);
       if (!validation.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, "An error occurred"),
-          status: EStatusCodes.enum.badRequest,
-          success: false,
-        };
-        res.status(EStatusCodes.enum.badRequest).json(data);
-        return
+        throwError({
+          message: "Validation failed",
+          description: validation.error,
+          statusCode: EStatusCodes.enum.badRequest,
+          type: "Validation",
+        });
+        return;
       }
 
-      const user = validation.data;
-      const result = await this.authUseCase.socialSignIn(user);
+      const result = await this.authUseCase.socialSignIn(validation.data);
       if (!result.success) {
-        const data: IResponseData<null> = {
-          ...this.generateMetadata(req, result.error),
-          status: result.status ?? EStatusCodes.enum.unauthorized,
-          success: false,
-        };
-        res.status(data.status).json(data);
-        return
+        throwError({
+          message: "Social sign in failed",
+          description: result.error,
+          statusCode: result.status ?? EStatusCodes.enum.unauthorized,
+          type: "Auth",
+        });
+        return;
       }
 
       const data: IResponseData<TUser> = {
@@ -146,6 +148,7 @@ export class AuthControllers {
       };
       res.status(data.status).json(data);
     } catch (error) {
+      logger.error(`Error in socialSignIn:`, error);
       next(error);
     }
   }
@@ -160,6 +163,7 @@ export class AuthControllers {
           success: true,
         });
     } catch (error) {
+      logger.error(`Error in signOut:`, error);
       next(error);
     }
   }
@@ -169,7 +173,7 @@ export class AuthControllers {
       accessTokenOptions: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "lax" as const,
         maxAge: 15 * 60 * 1000,
         domain: "localhost",
         path: "/",
@@ -178,7 +182,7 @@ export class AuthControllers {
       refreshTokenOptions: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "lax" as const,
         maxAge: 7 * 24 * 60 * 60 * 1000,
         domain: "localhost",
         path: "/",
@@ -187,11 +191,7 @@ export class AuthControllers {
     };
   }
 
-  private setCookies(
-    res: Response,
-    accessToken?: string,
-    refreshToken?: string
-  ) {
+  private setCookies(res: Response, accessToken?: string, refreshToken?: string) {
     const { accessTokenOptions, refreshTokenOptions } = this.getTokenOptions();
     res.cookie("access_token", accessToken, accessTokenOptions);
     res.cookie("refresh_token", refreshToken, refreshTokenOptions);

@@ -1,6 +1,5 @@
 import QueryString from "qs";
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../../../shared/error";
 import { OAuthProviders } from "../../../data/enum/auth";
 import { GoogleAuthSchema, TGoogleAuthConfig } from "../../../config/google";
 import { validateData } from "../../../util/functions";
@@ -8,21 +7,23 @@ import { EStatusCodes } from "../../../shared/enum";
 import { env } from "../../../config/env";
 import { IResponseData } from "../../../shared/entity";
 import { SocialSignInDTO } from "../../../data/dto/auth";
+import { throwError } from "../../../shared/error"
+import { logger } from "../../../util/logger";
 
 interface GoogleProfile {
   id: string;
   email: string;
   name: string;
   picture: string;
-  verified_email: boolean
+  verified_email: boolean;
 }
 
 interface GoogleTokens {
   access_token: string;
   token_type: string;
   id_token: string;
-  expires_in: number,
-  refresh_token: string
+  expires_in: number;
+  refresh_token: string;
 }
 
 export class GoogleAuthControllers {
@@ -31,16 +32,26 @@ export class GoogleAuthControllers {
   constructor(googleAuthConfig: TGoogleAuthConfig) {
     const validation = validateData(googleAuthConfig, GoogleAuthSchema);
     if (!validation.success) {
-      throw new AppError({
+      throwError({
         message: "Invalid Google auth configuration.",
         statusCode: EStatusCodes.enum.badRequest,
-        details: validation.error
+        description: validation.error,
+        type: "Validation",
       });
     }
     this.config = Object.freeze({ ...googleAuthConfig });
     this.authRequest = this.authRequest.bind(this);
     this.getGoogleTokens = this.getGoogleTokens.bind(this);
     this.getUserProfile = this.getUserProfile.bind(this);
+  }
+
+  private generateMetadata(req: Request, message: string, type?: string) {
+    return {
+      url: req.url,
+      path: req.path,
+      type: type ?? "Google Auth",
+      message,
+    };
   }
 
   private createAuthOptions(): string {
@@ -58,25 +69,25 @@ export class GoogleAuthControllers {
     url: string,
     errorMessage: string,
     options: RequestInit = {}
-  ): Promise<T> {
+  ): Promise<T | undefined> {
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
-        throw new AppError({
+        throwError({
           message: errorMessage,
           type: "Auth Error",
           statusCode: EStatusCodes.enum.badRequest,
-          details: `Request failed with status: ${response.status}`,
+          description: `Request failed with status: ${response.status}`,
         });
       }
       const data = await response.json();
-      return data
+      return data as T
     } catch (error: any) {
-      throw new AppError({
+      throw throwError({
         message: errorMessage,
         type: "Auth Error",
         statusCode: EStatusCodes.enum.internalServerError,
-        details: error.message,
+        description: error.message,
       });
     }
   }
@@ -85,37 +96,30 @@ export class GoogleAuthControllers {
     try {
       const options = this.createAuthOptions();
       const authUrl = `${this.config.codeAccessUrl}?${options}`;
-      const callback = req.query.callback
+      const callback = req.query.callback as string | undefined;
 
       if (callback) {
-        const validCallBack = env.google_callback_url.includes(callback as string)
+        const validCallBack = env.google_callback_url.includes(callback);
         if (!validCallBack) {
-          res.status(EStatusCodes.enum.badRequest).json({
-            status: EStatusCodes.enum.badRequest,
-            success: false,
-            message: "Invalid callback URL provided."
-          } as IResponseData<null>)
+          throwError({
+            message: "Invalid callback URL provided.",
+            statusCode: EStatusCodes.enum.badRequest,
+            type: "Validation",
+          });
         }
-        res.status(EStatusCodes.enum.ok).json({
+        const data: IResponseData<{ redirect: { path: string } }> = {
+          ...this.generateMetadata(req, "Google auth URL generated successfully.", "Google Auth Request"),
           success: true,
-          message: "Google auth URL generated successfully.",
           status: EStatusCodes.enum.ok,
-          type: "Google Auth Request",
-          redirect: {
-            path: authUrl
-          }
-        } as IResponseData<null>)
+          data: { redirect: { path: authUrl } },
+        };
+        res.status(data.status).json(data);
       } else {
         res.redirect(authUrl);
       }
-
-    } catch (error: any) {
-      next(new AppError({
-        message: "Failed to create Google Auth request URL.",
-        type: "Auth Error",
-        details: error.message,
-        statusCode: EStatusCodes.enum.internalServerError
-      }));
+    } catch (error) {
+      logger.error("Error in authRequest:", error);
+      next(error);
     }
   }
 
@@ -123,12 +127,24 @@ export class GoogleAuthControllers {
     try {
       const code = req.query.code as string | undefined;
       if (!code) {
-        throw new AppError({
+        throwError({
           message: "Authorization code is missing.",
+          description: "Google Authorization code is missing or Invalid.",
+          statusCode: EStatusCodes.enum.badRequest,
           type: "Auth Error",
-          statusCode: EStatusCodes.enum.badRequest
+        });
+        return
+      }
+      const googleCodeRegex = /^4\/[A-Za-z0-9-_]+$/;
+      if (!googleCodeRegex.test(code)) {
+        throwError({
+          message: "Invalid authorization code format.",
+          description: "The provided Google authorization code is not in the correct format.",
+          statusCode: EStatusCodes.enum.badRequest,
+          type: "Auth Error",
         });
       }
+
       const query = QueryString.stringify({
         code,
         client_id: this.config.clientId,
@@ -141,11 +157,12 @@ export class GoogleAuthControllers {
       const tokens = await this.fetchWithErrorHandling<GoogleTokens>(
         url,
         "Failed to obtain Google tokens.",
-        { method: "POST" },
+        { method: "POST" }
       );
       req.body = tokens;
       next();
     } catch (error) {
+      logger.error("Error in getGoogleTokens:", error);
       next(error);
     }
   }
@@ -156,11 +173,12 @@ export class GoogleAuthControllers {
       const { access_token, token_type, id_token } = tokens;
 
       if (!access_token || !token_type || !id_token) {
-        throw new AppError({
+        throwError({
           message: "Incomplete token information received.",
+          statusCode: EStatusCodes.enum.badRequest,
           type: "Auth Error",
-          statusCode: EStatusCodes.enum.badRequest
         });
+        return
       }
 
       const url = `${this.config.profileAccessUrl}?alt=json&access_token=${access_token}`;
@@ -173,6 +191,16 @@ export class GoogleAuthControllers {
           },
         }
       );
+
+      if (!profile) {
+        throwError({
+          message: "Failed to fetch Google user profile.",
+          description: "Failed to fetch Google user profile.",
+          statusCode: EStatusCodes.enum.internalServerError,
+          type: "Auth"
+        })
+        return
+      }
 
       const userData: SocialSignInDTO = {
         firstName: profile.name,
@@ -190,6 +218,7 @@ export class GoogleAuthControllers {
       req.body = userData;
       next();
     } catch (error) {
+      logger.error("Error in getUserProfile:", error);
       next(error);
     }
   }

@@ -1,27 +1,38 @@
 import { env } from "../../config/env";
 import { logger } from "../../util/logger";
+import { EStatusCodes } from "../enum";
 
-export type AppErrorPayload = {
-  message: string;
-  code?: string;
+export type ErrorPayload = {
+  message?: string;
   statusCode?: number;
-  details?: any;
-} | Error
+  description?: string
+  type?: string
+}
 
-export class AppError<T extends AppErrorPayload> extends Error {
-  public readonly error: T;
+export class AppError extends Error {
+  public readonly error: ErrorPayload;
 
-  constructor(err: T) {
-    super(err?.message);
+  constructor({
+    statusCode = EStatusCodes.enum.internalServerError,
+    description = "An Unexpected Error Occurred",
+    message = "Internal Server Error",
+    type = "Server Error"
+  }: ErrorPayload) {
+    super(message);
     this.error = {
-      ...err,
-      stack: env?.in_prod ? undefined : this.stack,
+      message,
+      description,
+      statusCode,
+      type
     };
-
-    Error.stackTraceLimit = env?.in_prod ? 0 : 2;
+    Error.stackTraceLimit = env?.in_prod ? 0 : 1;
     Error.captureStackTrace(this, this.constructor);
     if (!env?.in_prod) {
       logger.error(this.error);
     }
   }
 }
+
+export const throwError = (payload?: ErrorPayload): AppError => {
+  throw new AppError(payload ?? {});
+};

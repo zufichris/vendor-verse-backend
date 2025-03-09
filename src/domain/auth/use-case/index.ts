@@ -141,7 +141,8 @@ export default class AuthUseCase extends AutUseCaseRepository {
       id: user?.id,
       profilePictureUrl: user?.profilePictureUrl,
       email: user.email,
-      roles: user?.roles
+      roles: user?.roles,
+      custId: user.custId
     }
     const tokens = this.generateTokens(tokenData);
 
@@ -177,6 +178,8 @@ export default class AuthUseCase extends AutUseCaseRepository {
   decodeJWT(token: string): Partial<TUser> | null {
     const decoded = JWT.decode(token);
     if (decoded && typeof decoded === 'object') {
+      delete decoded.iat
+      delete decoded.exp
       return decoded as Partial<TUser>
     }
     return null;

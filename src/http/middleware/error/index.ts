@@ -1,30 +1,29 @@
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../../../shared/error";
+import { ErrorPayload, throwError } from "../../../shared/error";
 import { EStatusCodes } from "../../../shared/enum";
 import { IResponseData } from "../../../shared/entity";
-import { env } from "../../../config/env";
 
-export const notFound = (req: Request, res: Response, next: NextFunction) => {
+export const notFound = (_: Request, __: Response, next: NextFunction) => {
     next(
-        new AppError({
-            message: "Resource Not Found",
-            status: EStatusCodes.enum.notFound,
-            type: "Invalid Request",
-            description: 'The requested resource could not be found.',
+        throwError({
+            statusCode: EStatusCodes.enum.notFound,
+            message: "Resource notfound",
+            description: "The Requested resource does not exist or temporally unavailable",
+            type: "Notfound"
         })
     );
 };
 
 export const errorHandler = (
-    err: AppError<any>,
+    { error }: { error: ErrorPayload },
     req: Request,
     res: Response,
     _: NextFunction
 ) => {
-    const statusCode = err?.error?.statusCode ?? EStatusCodes.enum.internalServerError;
-    const message = err?.message ?? "An unexpected error occurred.";
-    const description = err?.error?.description ?? 'An unexpected error occurred.';
-    const type = err.error?.type ?? "Error";
+    const statusCode = error?.statusCode ?? EStatusCodes.enum.internalServerError;
+    const message = error?.message ?? "An unexpected error occurred.";
+    const description = error?.description ?? 'An unexpected error occurred.';
+    const type = error.type
 
     const errorResponse: IResponseData<undefined> = {
         success: false,
@@ -36,9 +35,8 @@ export const errorHandler = (
         },
         path: req.path,
         url: req.url,
-        stack: env.in_prod ? undefined : err.stack,
         type: type,
     };
-
+    console.log(error);
     res.status(statusCode).json(errorResponse);
 };

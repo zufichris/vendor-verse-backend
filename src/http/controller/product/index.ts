@@ -7,6 +7,9 @@ import { TProduct } from "../../../data/entity/product";
 import { IQueryFilters, IResponseData, IResponseDataPaginated } from "../../../shared/entity";
 import { CreateProductDTO, UpdateProductDTO, CreateProductSchema, UpdateProductSchema } from "../../../data/dto/product";
 import ProductUseCase from "../../../domain/product/use-case";
+import qs from 'qs';
+import { throwError } from "../../../shared/error";
+import { logger } from "../../../util/logger";
 
 export class ProductControllers {
     constructor(
@@ -24,25 +27,23 @@ export class ProductControllers {
         try {
             const validate = validateData<CreateProductDTO>(req.body, CreateProductSchema);
             if (!validate.success) {
-                const data = {
-                    ...this.generateMetadata(req, "Validation Failed"),
-                    status: EStatusCodes.enum.badRequest,
-                    success: false,
-                    description: validate.error
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Validation failed",
+                    description: validate.error,
+                    statusCode: EStatusCodes.enum.badRequest,
+                    type: "Validation"
+                });
                 return;
             }
 
             const result = await this.productUseCase.create.execute(validate.data, req.user);
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error),
-                    status: EStatusCodes.enum.conflict,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Product creation failed",
+                    description: result.error,
+                    statusCode: EStatusCodes.enum.conflict,
+                    type: "Conflict"
+                });
                 return;
             }
 
@@ -54,6 +55,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in createProduct:`, error);
             next(error);
         }
     }
@@ -62,24 +64,23 @@ export class ProductControllers {
         try {
             const productId = req.params.productId;
             if (!productId) {
-                const data = {
-                    ...this.generateMetadata(req, "Product ID is required"),
-                    status: EStatusCodes.enum.badRequest,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Invalid product ID",
+                    description: "Product ID is required",
+                    statusCode: EStatusCodes.enum.badRequest,
+                    type: "Validation"
+                });
                 return;
             }
 
             const result = await this.productUseCase.get.execute({ id: productId });
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error ?? "Product Not Found"),
-                    status: EStatusCodes.enum.notFound,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Product not found",
+                    description: result.error ?? "Product Not Found",
+                    statusCode: EStatusCodes.enum.notFound,
+                    type: "NotFound"
+                });
                 return;
             }
 
@@ -91,6 +92,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in getProduct:`, error);
             next(error);
         }
     }
@@ -99,14 +101,13 @@ export class ProductControllers {
         try {
             const query = this.generateProductQuery(req.query);
             const result = await this.productUseCase.query.execute(query);
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error ?? "Failed to retrieve products"),
-                    status: EStatusCodes.enum.badGateway,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Failed to retrieve products",
+                    description: result.error ?? "Failed to retrieve products",
+                    statusCode: EStatusCodes.enum.badGateway,
+                    type: "Server"
+                });
                 return;
             }
 
@@ -118,6 +119,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in queryProducts:`, error);
             next(error);
         }
     }
@@ -126,13 +128,12 @@ export class ProductControllers {
         try {
             const validate = validateData<UpdateProductDTO>(req.body, UpdateProductSchema);
             if (!validate.success) {
-                const data = {
-                    ...this.generateMetadata(req, "Validation Failed"),
-                    status: EStatusCodes.enum.badRequest,
-                    success: false,
-                    details: validate.error
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Validation failed",
+                    description: validate.error,
+                    statusCode: EStatusCodes.enum.badRequest,
+                    type: "Validation"
+                });
                 return;
             }
 
@@ -140,14 +141,13 @@ export class ProductControllers {
                 data: req.body,
                 id: req.body.id
             }, req.user);
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error ?? "Failed to update product"),
-                    status: EStatusCodes.enum.conflict,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Product update failed",
+                    description: result.error ?? "Failed to update product",
+                    statusCode: EStatusCodes.enum.conflict,
+                    type: "Conflict"
+                });
                 return;
             }
 
@@ -159,6 +159,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in updateProduct:`, error);
             next(error);
         }
     }
@@ -167,16 +168,14 @@ export class ProductControllers {
         try {
             const productId = req.params.productId;
             const status = req.body.status;
-
             const result = await this.productUseCase.updateStatus.execute({ id: productId, status });
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error ?? "Failed to change product status"),
-                    status: result.status ?? EStatusCodes.enum.badGateway,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Failed to change product status",
+                    description: result.error ?? "Failed to change product status",
+                    statusCode: result.status ?? EStatusCodes.enum.badGateway,
+                    type: "Server"
+                });
                 return;
             }
 
@@ -188,6 +187,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in updateProductStatus:`, error);
             next(error);
         }
     }
@@ -196,14 +196,13 @@ export class ProductControllers {
         try {
             const productId = req.params.productId;
             const result = await this.productUseCase.delete.execute({ id: productId }, req.user);
-
             if (!result.success) {
-                const data = {
-                    ...this.generateMetadata(req, result.error ?? "Failed to delete product"),
-                    status: EStatusCodes.enum.conflict,
-                    success: false
-                };
-                res.status(data.status).json(data);
+                throwError({
+                    message: "Failed to delete product",
+                    description: result.error ?? "Failed to delete product",
+                    statusCode: EStatusCodes.enum.conflict,
+                    type: "Conflict"
+                });
                 return;
             }
 
@@ -214,6 +213,7 @@ export class ProductControllers {
             };
             res.status(data.status).json(data);
         } catch (error) {
+            logger.error(`Error in deleteProduct:`, error);
             next(error);
         }
     }
@@ -223,34 +223,32 @@ export class ProductControllers {
             url: req.url,
             path: req.path,
             type: type ?? "Product",
-            message,
-            error: { message }
+            message
         };
     }
+
     private generateProductQuery(query: qs.ParsedQs) {
         let {
             page = 1,
             limit = 10,
             sort_order = "asc",
             sort_by = "createdAt"
-        } =
-            query;
+        } = query;
 
-        const sortByStr = String(sort_by);
-        const sortOrderStr = String(sort_order);
-        const sort = { [sortByStr]: sortOrderStr === 'desc' ? -1 : 1 }
+        const sortByStr = typeof sort_by === 'object' ? 'createdAt' : String(sort_by);
+        const sortOrderStr = typeof sort_order === 'object' ? 'asc' : String(sort_order);
+        const sort = { [sortByStr]: sortOrderStr === 'desc' ? -1 : 1 };
         const searchTerm = typeof query.search === 'string' ? query.search : '';
         const search = searchTerm ? {
             $or: [
                 { name: { $regex: searchTerm, $options: 'i' } },
             ]
         } : undefined;
-        const filter = search ?? {
-        }
+        const filter = search ?? {};
 
         const queryOptions = {
             sort
-        }
+        };
         const projection = {
             id: true,
             defaultCurrency: true,
@@ -268,7 +266,7 @@ export class ProductControllers {
             sku: true,
             updatedAt: true,
             createdAt: true,
-        }
+        };
 
         const options: IQueryFilters<TProduct> = {
             filter,
@@ -276,10 +274,9 @@ export class ProductControllers {
             page: Number(page ?? 1),
             projection,
             queryOptions
-        }
-        return options
+        };
+        return options;
     }
 }
-
 
 export const productControllers = new ProductControllers(new ProductUseCase(new ProductRepositoryImpl(ProductModel)));
