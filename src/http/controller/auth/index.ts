@@ -96,11 +96,15 @@ export class AuthControllers {
         return;
       }
 
-      const data: IResponseData<TUser> = {
+      const data: IResponseData<TUser & { accessToken?: string | null }> = {
         ...this.generateMetadata(req, "Signin successful"),
         status: EStatusCodes.enum.ok,
         success: true,
-        data: result.data,
+        data: {
+          ...result.data,
+          tokenPair: undefined,
+          accessToken: result.data.tokenPair?.accessToken
+        },
       };
 
       this.setCookies(

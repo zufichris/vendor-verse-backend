@@ -61,6 +61,7 @@ export default class AuthUseCase extends AutUseCaseRepository {
       if (!validate.success) {
         return handleUseCaseError({ error: "Invalid email or password", title: "SignIn" })
       }
+      validate.data.email = validate.data.email.toLowerCase()
 
       const exists = await this.userRepository.findByEmail(validate.data.email);
 

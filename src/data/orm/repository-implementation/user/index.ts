@@ -1,9 +1,9 @@
 import { UserRepository } from "../../../../domain/user/repository";
 import { ID, IQueryFilters, IQueryResult } from "../../../../shared/entity";
-import { getQueryMetaData, getUnitId, toArray } from "../../../../util/functions";
+import { getQueryMetaData, getUnitId, toArray, validateData } from "../../../../util/functions";
 import { UserDocument, UserModel } from "../../model/user";
 import { logger } from "../../../../util/logger";
-import { TUser } from "../../../entity/user";
+import { TUser, UserSchema } from "../../../entity/user";
 import mongoose from "mongoose";
 import { AddressDocument, AddressModel } from "../../model/address";
 import { TAddress } from "../../../entity/address";
@@ -24,7 +24,11 @@ export class UserRepositoryImpl implements UserRepository {
             if (!custId) {
                 throw new Error("Error Getting Customer ID")
             }
-            const newUser: UserDocument = await this.userModel.create({ ...data, custId });
+            const valid = validateData({ ...data, custId }, UserSchema)
+            if (!valid.success) {
+                throw Error("Invalid data")
+            }
+            const newUser: UserDocument = await this.userModel.create(valid.data);
             return newUser.toJSON() as TUser | null
         } catch (error) {
             logger.error("Error Creating user", { error, data });

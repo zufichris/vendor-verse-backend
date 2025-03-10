@@ -3,13 +3,13 @@ import { userControllers } from "../../controller/user";
 import { authMiddleware } from "../../middleware/auth";
 
 const router = express.Router();
-router.use(authMiddleware.requireAuth, authMiddleware.requirePermission("user", "manage"),)
+router.use(authMiddleware.requireAuth,)
 router.route("/")
-  .post(userControllers.createUser)
+  .post( authMiddleware.requirePermission("user", "create"),userControllers.createUser)
   .get(userControllers.queryUsers);
-router.route("/:custId",)
+router.route("/:userId",)
   .get(userControllers.getUser)
-  .patch(userControllers.updateUser)
+  .patch( authMiddleware.requirePermission("user", "update",),userControllers.updateUser,)
 router.route("/address/:custId")
 router.route("/stats/:custId")
   .get(userControllers.getUserStats)

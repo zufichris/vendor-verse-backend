@@ -17,7 +17,7 @@ export class GetPermissionsUseCase implements BaseUseCase<string[], TRolePermiss
                     permissions: 1
                 },
                 queryOptions: {
-                    sort: { weight: 1 }
+                    sort: { weight: -1 }
                 },
                 page: 1,
                 limit: 1

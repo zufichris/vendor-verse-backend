@@ -37,6 +37,5 @@ export const errorHandler = (
         url: req.url,
         type: type,
     };
-    console.log(error);
     res.status(statusCode).json(errorResponse);
 };

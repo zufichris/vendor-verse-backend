@@ -35,8 +35,8 @@ export class GetUserUseCase implements BaseUseCase<{ userId?: string, email?: st
             })
             if (!isPermitted) {
                 return handleUseCaseError({
-                    error: "Forbidden: You do not have permission to create roles.",
-                    title: "Create Role - Authorization",
+                    error: "Forbidden: You do not have permission to view this user.",
+                    title: "View User- Authorization",
                     status: EStatusCodes.enum.forbidden,
                 });
             }

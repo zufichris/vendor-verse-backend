@@ -47,7 +47,7 @@ export class CreateUserUseCase implements BaseUseCase<CreateUserDTO, TUser> {
         external: data.profilePictureUrl?.external ?? false,
         placeholderText
       }
-
+      data.email=data.email.toLowerCase()
       const created = await this.userRepository.create(data)
       if (!created) {
         return handleUseCaseError({ error: "Failed to create user in the database.", title: "Create User - Database Error", status: EStatusCodes.enum.internalServerError })

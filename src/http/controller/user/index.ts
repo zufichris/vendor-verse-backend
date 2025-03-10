@@ -36,32 +36,20 @@ export class UserControllers {
 
   async getMe(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = req.user;
-      if (!user) {
+      const result = await this.userUseCase.get.execute({
+        userId: req.user?.userId
+      }, req.user)
+      if (!result.success) {
         throwError({
-          message: "Authentication required",
-          description: "No user found in request",
-          statusCode: EStatusCodes.enum.unauthorized,
-          type: "Auth"
+          message: result.error,
+          description: result.error,
+          statusCode: result.status,
         });
         return;
       }
-
-      const data: IResponseData<Omit<TUser, "stats"> & { accessToken?: string }> = {
+      const data: IResponseData<TUser> = {
         ...this.generateMetadata(req, "User profile retrieved successfully"),
-        data: {
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email!,
-          accessToken: user.tokenPair?.accessToken!,
-          preferences: user.preferences!,
-          isActive: user.isActive || false,
-          isEmailVerified: user.isEmailVerified || false,
-          roles: user.roles || [],
-          profilePictureUrl: user.profilePictureUrl,
-          custId: user.custId,
-          phoneNumber: user.phoneNumber
-        },
+        data: result.data,
         status: EStatusCodes.enum.ok,
         success: true
       };
@@ -142,21 +130,17 @@ export class UserControllers {
       const result = await this.userUseCase.get.execute({ userId }, req.user);
       if (!result.success) {
         throwError({
-          message: "User not found",
+          message: result.error,
           description: result.error,
-          statusCode: EStatusCodes.enum.notFound,
-          type: "NotFound"
+          statusCode: result.status,
+          type: "User"
         });
         return;
       }
 
       const data: IResponseData<TUser> = {
         ...this.generateMetadata(req, "User retrieved successfully"),
-        data: {
-          firstName: result.data.firstName,
-          lastName: result.data.lastName,
-          email: result.data.email,
-        } as TUser,
+        data: result.data,
         status: EStatusCodes.enum.ok,
         success: true
       };
@@ -169,7 +153,8 @@ export class UserControllers {
 
   async updateUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const validate = validateData<UpdateUserDTO>(req.body, UpdateUserSchema);
+      const {userId}=req.params
+      const validate = validateData<UpdateUserDTO>({...req.body,userId}, UpdateUserSchema);
       if (!validate.success) {
         throwError({
           message: "Validation failed",
@@ -179,13 +164,13 @@ export class UserControllers {
         });
         return;
       }
-
       const result = await this.userUseCase.update.execute(validate.data, req.user!);
+
       if (!result.success) {
         throwError({
           message: "User update failed",
           description: result.error,
-          statusCode: EStatusCodes.enum.internalServerError,
+          statusCode:result.status,
           type: "Server"
         });
         return;

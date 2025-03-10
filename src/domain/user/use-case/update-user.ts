@@ -2,7 +2,7 @@ import { TUser } from "../../../data/entity/user";
 import { UpdateUserDTO, UpdateUserSchema } from "../../../data/dto/user";
 import { AuthContext, BaseUseCase, handleUseCaseError, UseCaseResult } from "../../../shared/use-case";
 import { IUserRepository } from "../repository";
-import { getPermission, hasRequiredPermissions, validateData } from "../../../util/functions";
+import { hasPermission, validateData } from "../../../util/functions";
 import { EStatusCodes } from "../../../shared/enum";
 
 export class UpdateUserUseCase implements BaseUseCase<UpdateUserDTO, TUser, AuthContext> {
@@ -13,20 +13,34 @@ export class UpdateUserUseCase implements BaseUseCase<UpdateUserDTO, TUser, Auth
             if (!context?.userId) {
                 return handleUseCaseError({ error: "Unauthorized", title: "Update User", status: EStatusCodes.enum.forbidden })
             }
-            const REQUIRED_PERMISSION = getPermission("user", "manage_own");
-            const hasPermission = hasRequiredPermissions(REQUIRED_PERMISSION, context.permissions);
-            if (!hasPermission) {
+            const isPermitted = hasPermission({
+                requestedAction: "update",
+                resource: {
+                    id: "user",
+                    ownerId: input.userId
+                },
+                userId: context.userId,
+                userPermissions: context.permissions
+            })
+            if (!isPermitted) {
                 return handleUseCaseError({
-                    error: "Forbidden: You do not have permission to create roles.",
-                    title: "Create Role - Authorization",
+                    error: "Forbidden: You do not have permission to update this user.",
+                    title: "Update User- Authorization",
                     status: EStatusCodes.enum.forbidden,
                 });
             }
             const validate = validateData<UpdateUserDTO>(input, UpdateUserSchema);
+
             if (!validate.success) {
                 return handleUseCaseError({ error: validate.error, title: "Update User", status: EStatusCodes.enum.badRequest });
             }
-            const data = await this.userRepository.update(input.userId, validate.data);
+
+            const exists = await this.userRepository.findById(validate.data.userId)
+            if (!exists) {
+                return handleUseCaseError({ error: "User Notfound", title: "Update User", status: EStatusCodes.enum.notFound });
+            }
+
+            const data = await this.userRepository.update(validate.data.userId, validate.data);
             if (!data) {
                 return handleUseCaseError({ error: "Error Updating User", title: "Update User" });
             }

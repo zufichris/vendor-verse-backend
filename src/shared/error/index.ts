@@ -7,6 +7,7 @@ export type ErrorPayload = {
   statusCode?: number;
   description?: string
   type?: string
+  stack?:any
 }
 
 export class AppError extends Error {
@@ -16,7 +17,8 @@ export class AppError extends Error {
     statusCode = EStatusCodes.enum.internalServerError,
     description = "An Unexpected Error Occurred",
     message = "Internal Server Error",
-    type = "Server Error"
+    type = "Server Error",
+    stack
   }: ErrorPayload) {
     super(message);
     this.error = {
@@ -30,6 +32,7 @@ export class AppError extends Error {
     if (!env?.in_prod) {
       logger.error(this.error);
     }
+    console.log("\n",description, "\n",statusCode, "\n",type, "\n",this.stack);
   }
 }
 

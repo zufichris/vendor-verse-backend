@@ -25,23 +25,18 @@ export class AuthMiddleWare {
 
   async requireAuth(req: Request, _: Response, next: NextFunction) {
     try {
-      const token = this.getToken(req, "access_token");
-      if (!token || typeof token !== 'string') {
+      let token = this.getToken(req, "access_token");
+      if (!token) {
         throwError({
           message: "Unauthorized",
           type: "Auth",
           statusCode: EStatusCodes.enum.unauthorized,
-          description: "Missing access token",
+          description: "Missing or invalid  Token",
         });
         return;
       }
-      let jwtToken;
-      if (token.startsWith("Bearer ")) {
-        jwtToken = token.split(" ")[1];
-      } else {
-        jwtToken = token;
-      }
-      const decoded = this.authUseCase.decodeJWT(jwtToken);
+
+      const decoded = this.authUseCase.decodeJWT(token);
       if (!decoded) {
         throwError({
           message: "Unauthorized",
@@ -101,7 +96,6 @@ export class AuthMiddleWare {
           userId: req.user.userId,
           userPermissions,
         });
-
         if (!permitted) {
           throwError({
             message: "Unauthorized",
@@ -119,7 +113,7 @@ export class AuthMiddleWare {
   }
 
   private getToken(req: Request, tokenName: "access_token" | "refresh_token") {
-    return req.cookies[tokenName] || req.headers.authorization;
+    return (typeof req.cookies[tokenName] === "string") ? req.cookies[tokenName] : req.headers.authorization?.split("Bearer ")[1]
   }
 }
 
