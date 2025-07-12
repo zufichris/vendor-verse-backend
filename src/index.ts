@@ -1,15 +1,28 @@
-import { StartServer } from "./http/server/httpServer";
-import { initializeApp } from "./start";
-import { env } from "./config/env";
+import express from "express";
+import cors from "cors";
+import {
+  errorMiddleware,
+  handleUncaughtException,
+  handleUnhandledRejection,
+  notFoundMiddleware,
+} from "./core/middleware/error.middleware";
+import { env } from "./config";
+import { logger } from "./logger";
+import { routesv1 } from "./routes/v1";
+import dotenv from "dotenv";
+import { DB } from "./database";
+dotenv.config();
+new DB(env.mongo_uri).connect()
 
-async function main() {
-    try {
-        const app = await initializeApp();
-        StartServer(app, Number(env.port));
-    } catch (error) {
-        console.error("Failed to start the application:", error);
-        process.exit(1);
-    }
-}
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use("/api/v1", routesv1);
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
+handleUnhandledRejection();
+handleUncaughtException();
 
-main();
+app.listen(env.port, () => {
+  logger.info(`app running on http://localhost:${env.port}`);
+});
