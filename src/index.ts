@@ -1,34 +1,28 @@
 import express from "express";
-import cookieParser from "cookie-parser";
-import cors from "cors"
-import router from "./http/routes/route_v1";
-import { Start } from "./http/server/httpServer";
-import { errorHandler, notFound } from "./http/middleware/error";
-import { DB } from "./config/db-config";
-import { env } from "./config/env";
-import { loggerMiddleware } from "./http/middleware/logger";
-
-new DB(env.mongo_uri).connect();
+import cors from "cors";
+import {
+  errorMiddleware,
+  handleUncaughtException,
+  handleUnhandledRejection,
+  notFoundMiddleware,
+} from "./core/middleware/error.middleware";
+import { env } from "./config";
+import { logger } from "./logger";
+import { routesv1 } from "./routes/v1";
+import dotenv from "dotenv";
+import { DB } from "./database";
+dotenv.config();
+new DB(env.mongo_uri).connect()
 
 const app = express();
-app.use(cors())
-app.use(express.json({}))
-app.use(
-    express.urlencoded({
-        extended: true,
-    })
-);
-app.use(cookieParser());
-app.use(loggerMiddleware)
+app.use(cors());
+app.use(express.json());
+app.use("/api/v1", routesv1);
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
+handleUnhandledRejection();
+handleUncaughtException();
 
-app.use("/api/v1", router);
-app.get("/", (_, res) => {
-    res.send(`
-        <h1>Welcome to Vendor Verse API</h1></br>
-        <a href='/api/v1'>Explore API</a>
-    `)
-})
-app.use(notFound);
-app.use(errorHandler);
-Start(app);
-export default app;
+app.listen(env.port, () => {
+  logger.info(`app running on http://localhost:${env.port}`);
+});

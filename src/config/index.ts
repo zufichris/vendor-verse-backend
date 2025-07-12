@@ -1,8 +1,7 @@
 import dotenv from "dotenv";
 import { z } from "zod";
 
-const { error, parsed } = dotenv.config();
-
+const { parsed } = dotenv.config();
 const ENVSchema = z.object({
     in_prod: z.boolean().optional(),
     port: z
@@ -58,4 +57,6 @@ export const env: TENV = {
     jwt_secret: parsed?.JWT_SECRET ?? "",
     url,
 };
-ENVSchema.parse(parsed);
+
+ENVSchema.parse(env);
+

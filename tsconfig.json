@@ -6,7 +6,7 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./src/global/express/"],
+    "typeRoots": ["./node_modules/@types", "src/shared/express"],
     "types": ["node", "express", "jest"],
     "skipLibCheck": true
   },
