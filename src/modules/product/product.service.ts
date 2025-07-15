@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import mongoose, { FilterQuery } from 'mongoose';
 import { ProductRepository } from './product.repository';
 import { BaseRepository } from '../../core/repository';
 import {
@@ -13,8 +13,7 @@ import {
 } from './product.dtos';
 import { Product, ProductCategory, ProductVariant, ProductVariantSchema } from './product.types';
 import { AppError } from '../../core/middleware/error.middleware';
-import { ProductCategoryDocument, ProductVariantDocumen } from './product.models';
-import { seedProducts } from './create-products.dto';
+import { features } from 'process';
 export class ProductService {
     constructor(
         private readonly productRepository: ProductRepository,
@@ -204,6 +203,49 @@ export class ProductService {
         return product;
     }
 
+    async filterProducts(query: Record<string, string>) {
+        const categoryId = mongoose.isValidObjectId(query.category) ? query.category : undefined;
+        const minPrice = query.min_price ? Number(query.min_price) : 0.00001;
+        const maxPrice = query.max_price ? Number(query.max_price) : 100000000000000;
+        const sort = query.sort === "asc" ? 1 : -1;
+        const search = typeof query.search === "string" ? query.search?.trim() : undefined
+        const limit = Number(query.limit) || 10;
+        const page = Number(query.page) || 1;
+        const skip = (page - 1) * limit;
+
+        const filter: Record<string, any> = {};
+
+        if (categoryId) {
+            filter.category = categoryId;
+        }
+
+        filter.price = { $gte: minPrice, $lte: maxPrice };
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } }
+            ];
+        }
+
+        const products = await this.productRepository.find(filter, undefined, {
+            limit,
+            skip,
+            sort: { featured: 1, name: sort, createdAt: sort }
+        });
+
+        const total = await this.productRepository.count(filter);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+
+        return {
+            products,
+            total,
+            page,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPreviousPage: page > 1,
+        };
+    }
     async getProductBySku(sku: string): Promise<Product> {
         if (!sku || typeof sku !== 'string') {
             throw AppError.badRequest('Invalid product SKU');
