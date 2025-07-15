@@ -9,11 +9,10 @@ import {
 import { ProductVariantSchema } from "./product.types"
 import { ApiHandler } from '../../util/api-handler';
 import { AppError } from '../../core/middleware/error.middleware';
-import { seedProductCategories } from './create-categories.dto';
 import { logger } from '../../logger';
 import { ProductCategoryModel } from './product.models';
 import { create } from 'domain';
-import { seedProducts } from './create-products.dto';
+import { query } from 'winston';
 
 export class ProductController {
     constructor(private readonly productService: ProductService) { }
@@ -73,7 +72,6 @@ export class ProductController {
             },
         });
     });
-
     public bulkCreateProducts = ApiHandler(async (req: Request, res: Response) => {
         const userId = req.user?.id;
         if (!userId) {
@@ -124,6 +122,17 @@ export class ProductController {
             })),
         });
     });
+
+    public filterProducts = ApiHandler(async (req, res) => {
+        const query = req.query
+        const result = await this.productService.filterProducts(query as Record<string, string>)
+        res.status(200).json({
+            status: 200,
+            success: true,
+            message: "products retrieved successfully",
+            data: result
+        })
+    })
 
     public getProductById = ApiHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
@@ -373,6 +382,7 @@ export class ProductController {
         if (req.query.type) {
             filter.type = req.query.type;
         }
+        console.log(req.query)
 
         const products = await this.productService.getActiveProducts(filter);
 
