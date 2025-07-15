@@ -8,13 +8,14 @@ export function createProductRouter(
     authMiddleware: AuthMiddleware,
 ): Router {
     const router = Router();
-router.route("/")
-      .post(
-        authMiddleware.requireAuth,
-        authMiddleware.authorize(UserRole.ADMIN),
-        productController.createProduct,
-    )
-    .get(productController.getActiveProducts)
+    router
+        .route("/")
+        .post(
+            authMiddleware.requireAuth,
+            authMiddleware.authorize(UserRole.ADMIN),
+            productController.createProduct,
+        )
+        .get(productController.getActiveProducts);
 
     router.post(
         "/products/bulk",
@@ -22,18 +23,14 @@ router.route("/")
         authMiddleware.authorize(UserRole.ADMIN),
         productController.bulkCreateProducts,
     );
-
+    router.get("/shop", productController.filterProducts);
     router.get(
         "/products/:id",
         authMiddleware.requireAuth,
         productController.getProductById,
     );
 
-    router.get(
-        "/products/slug/:slug",
-        authMiddleware.requireAuth,
-        productController.getProductBySlug,
-    );
+    router.get("/slug/:slug", productController.getProductBySlug);
 
     router.get(
         "/products/sku/:sku",
@@ -41,10 +38,7 @@ router.route("/")
         productController.getProductBySku,
     );
 
-    router.get(
-        "/search",
-        productController.searchProductsByNameOrDescription,
-    );
+    router.get("/search", productController.searchProductsByNameOrDescription);
 
     router.get(
         "/products/category/:categoryId",
@@ -52,7 +46,7 @@ router.route("/")
         productController.getProductsByCategory,
     );
 
-    router.get("/products/active", productController.getActiveProducts);
+    router.get("/active", productController.getActiveProducts);
 
     router.get(
         "/products/tags",
