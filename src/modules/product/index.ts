@@ -11,6 +11,7 @@ import { logger } from "../../logger";
 import { UserModel, UserRepository } from "../user";
 import { ProductController } from "./product.controller";
 import {
+    BannerModel,
     ProductCategoryModel,
     ProductModel,
     ProductVariantModel,
@@ -26,6 +27,7 @@ export function initProductModule() {
             new ProductRepository(ProductModel),
             new BaseRepository(ProductVariantModel),
             new BaseRepository(ProductCategoryModel),
+            new BaseRepository(BannerModel)
         ),
     );
     const authMw = new AuthMiddleware(new UserRepository(UserModel));
