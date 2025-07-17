@@ -17,12 +17,6 @@ export function createProductRouter(
         )
         .get(productController.getActiveProducts);
 
-    router.post(
-        "/products/bulk",
-        authMiddleware.requireAuth,
-        authMiddleware.authorize(UserRole.ADMIN),
-        productController.bulkCreateProducts,
-    );
     router.get("/shop", productController.filterProducts);
     router.get(
         "/products/:id",
@@ -73,28 +67,6 @@ export function createProductRouter(
         productController.updateProduct,
     );
 
-    router.delete(
-        "/products/:id",
-        authMiddleware.requireAuth,
-        authMiddleware.authorize(UserRole.ADMIN),
-        productController.softDelete,
-    );
-
-    router.post(
-        "/products/bulk-delete",
-        authMiddleware.requireAuth,
-        authMiddleware.authorize(UserRole.ADMIN),
-        productController.bulkSoftDelete,
-    );
-
-    router.post(
-        "/products/:id/restore",
-        authMiddleware.requireAuth,
-        authMiddleware.authorize(UserRole.ADMIN),
-        productController.restoreProduct,
-    );
-
-    // Variant routes
     router.post(
         "/products/:productId/variants",
         authMiddleware.requireAuth,
@@ -163,6 +135,28 @@ export function createProductRouter(
         authMiddleware.authorize(UserRole.ADMIN),
         productController.deleteCategory,
     );
+
+    router
+        .route("/banners")
+        .post(
+            authMiddleware.requireAuth,
+            authMiddleware.authorize(UserRole.ADMIN),
+            productController.createBanner,
+        )
+        .get(productController.getBanners);
+
+    router
+        .route("/banners/:id")
+        .patch(
+            authMiddleware.requireAuth,
+            authMiddleware.authorize(UserRole.ADMIN),
+            productController.updateBanner,
+        )
+        .delete(
+            authMiddleware.requireAuth,
+            authMiddleware.authorize(UserRole.ADMIN),
+            productController.deleteBanner,
+        );
 
     return router;
 }
