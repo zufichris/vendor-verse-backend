@@ -1,6 +1,6 @@
-import mongoose, { FilterQuery } from 'mongoose';
-import { ProductRepository } from './product.repository';
-import { BaseRepository } from '../../core/repository';
+import { ClientSession } from "mongoose";
+import { ProductRepository } from "./product.repository";
+import { BaseRepository, PaginationResult } from "../../core/repository";
 import {
     CreateProductDto,
     CreateProductDtoSchema,
@@ -10,812 +10,501 @@ import {
     CreateProductCategoryDtoSchema,
     UpdateProductCategoryDto,
     UpdateProductCategoryDtoSchema,
-} from './product.dtos';
-import { Product, ProductCategory, ProductVariant, ProductVariantSchema } from './product.types';
-import { AppError } from '../../core/middleware/error.middleware';
-import { features } from 'process';
+} from "./product.dtos";
+import {
+    Banner,
+    BannerSchema,
+    Product,
+    ProductCategory,
+    ProductVariant,
+} from "./product.types";
+import { AppError } from "../../core/middleware/error.middleware";
+import { z } from "zod";
+
 export class ProductService {
     constructor(
         private readonly productRepository: ProductRepository,
         private readonly variantRepository: BaseRepository<ProductVariant>,
         private readonly categoryRepository: BaseRepository<ProductCategory>,
+        private readonly bannersRepository: BaseRepository<Banner>,
     ) {
-        this.createCategory = this.createCategory.bind(this)
+        this.getBanners = this.getBanners.bind(this);
     }
 
     async createProduct(dto: CreateProductDto): Promise<Product> {
-        const parsedDto = CreateProductDtoSchema.safeParse(dto);
-        if (!parsedDto.success) {
-            throw AppError.badRequest('Invalid product data', parsedDto.error.flatten());
-        }
+        const validated = CreateProductDtoSchema.parse(dto);
+        const session = await this.startTransaction();
 
-        const validatedDto = parsedDto.data;
-
-        const existingProduct = await this.productRepository.findOne({
-            $or: [{ slug: validatedDto.slug }, { sku: validatedDto.sku }],
-            isDeleted: { $ne: true },
-        });
-        if (existingProduct) {
-            throw AppError.conflict(`Product with slug ${validatedDto.slug} or SKU ${validatedDto.sku} already exists`);
-        }
-
-        const category = await this.categoryRepository.findById(validatedDto.categoryId);
-        if (!category) {
-            throw AppError.notFound(`Category with ID ${validatedDto.categoryId} not found`);
-        }
-
-        let variants: ProductVariant[] = [];
-        if (validatedDto.type === 'configurable' && validatedDto.variants) {
-            const parsedVariants = validatedDto.variants.map(v => ProductVariantSchema.omit({ id: true, productId: true, createdAt: true, updatedAt: true, isInStock: true }).safeParse(v));
-            const variantErrors = parsedVariants.filter(result => !result.success);
-            if (variantErrors.length > 0) {
-                throw AppError.badRequest('Invalid variant data', variantErrors.map(e => e.error.flatten()));
-            }
-
-            const validatedVariants = parsedVariants.map(result => result.data);
-            for (const variant of validatedVariants) {
-                if (variant) {
-                    const existingVariant = await this.variantRepository.findOne({ sku: variant.sku });
-                    if (existingVariant) {
-                        throw AppError.conflict(`Variant with SKU ${variant.sku} already exists`);
-                    }
-                }
-            }
-
-            variants = await Promise.all(
-                validatedVariants.map(async variant => {
-                    if (variant) {
-                        const createdVariant = await this.variantRepository.create({
-                            ...variant,
-                            productId: validatedDto.id || new Date().toISOString(),
-                            isInStock: variant.stockQuantity > 0,
-                            createdAt: new Date().toISOString(),
-                        });
-                        return createdVariant;
-                    }
-                    throw AppError.badRequest('Invalid variant data');
-                }),
+        try {
+            const exists = await this.productRepository.findOne(
+                {
+                    $or: [{ slug: validated.slug }, { sku: validated.sku }],
+                    isDeleted: { $ne: true },
+                },
+                {},
+                { session },
             );
-        } else if (validatedDto.type === 'simple' && validatedDto.variants && validatedDto.variants.length > 0) {
-            throw AppError.badRequest('Simple products cannot have variants');
-        } else if (['virtual', 'downloadable'].includes(validatedDto.type) && (validatedDto.weight || validatedDto.dimensions)) {
-            throw AppError.badRequest('Virtual or downloadable products cannot have weight or dimensions');
-        }
+            if (exists) throw AppError.conflict("Slug or SKU already exists");
 
-        const product = await this.productRepository.create({
-            ...validatedDto,
-            variants,
-            isInStock: validatedDto.stockQuantity > 0,
-            createdAt: new Date().toISOString(),
-        });
-        return product;
-    }
-
-    async bulkCreateProducts(dtos: CreateProductDto[]): Promise<Product[]> {
-        if (!dtos || !Array.isArray(dtos) || dtos.length === 0) {
-            throw AppError.badRequest('Invalid or empty products array');
-        }
-
-        const parsedDtos = dtos.map(dto => CreateProductDtoSchema.safeParse(dto));
-        const errors = parsedDtos.filter(result => !result.success);
-        if (errors.length > 0) {
-            throw AppError.badRequest(
-                'Invalid product data',
-                errors.map(e => e.error.flatten()),
+            const category = await this.categoryRepository.findById(
+                validated.categoryId,
             );
-        }
+            if (!category) throw AppError.notFound("Category not found");
 
-        const validatedDtos = parsedDtos.map(result => result.data);
+            if (validated.type === "simple" && validated.variants?.length)
+                throw AppError.badRequest("Simple products cannot have variants");
+            if (
+                ["virtual", "downloadable"].includes(validated.type) &&
+                (validated.weight || validated.dimensions)
+            )
+                throw AppError.badRequest(
+                    "Virtual/downloadable products cannot have physical properties",
+                );
 
-        for (const dto of validatedDtos) {
-            const existingProduct = await this.productRepository.findOne({
-                $or: [{ slug: dto.slug }, { sku: dto.sku }],
-                isDeleted: { $ne: true },
+            const product = await this.productRepository.create({
+                ...validated,
+                isInStock: validated.stockQuantity > 0,
+                variants: [],
             });
-            if (existingProduct) {
-                throw AppError.conflict(`Product with slug ${dto.slug} or SKU ${dto.sku} already exists`);
-            }
 
-            const category = await this.categoryRepository.findById(dto.categoryId);
-            if (!category) {
-                throw AppError.notFound(`Category with ID ${dto.categoryId} not found`);
-            }
+            if (validated.variants?.length && validated.type === "configurable") {
+                let variantIds: string[] = [];
 
-            if (dto.type === 'configurable' && (!dto.variants || dto.variants.length === 0)) {
-                throw AppError.badRequest('Configurable products must have at least one variant');
-            }
-            if (dto.type === 'simple' && dto.variants && dto.variants.length > 0) {
-                throw AppError.badRequest('Simple products cannot have variants');
-            }
-            if (['virtual', 'downloadable'].includes(dto.type) && (dto.weight || dto.dimensions)) {
-                throw AppError.badRequest('Virtual or downloadable products cannot have weight or dimensions');
-            }
-        }
+                const skus = validated.variants.map((v, i) =>
+                    this.generateSku(v.name || product.name, category.slug, i + 2),
+                );
 
-        const products = await Promise.all(
-            validatedDtos.map(async dto => {
-                let variants: ProductVariant[] = [];
-                if (dto.type === 'configurable' && dto.variants) {
-                    const parsedVariants = dto.variants.map(v => ProductVariantSchema.omit({ id: true, productId: true, createdAt: true, updatedAt: true, isInStock: true }).safeParse(v));
-                    const variantErrors = parsedVariants.filter(result => !result.success);
-                    if (variantErrors.length > 0) {
-                        throw AppError.badRequest('Invalid variant data', variantErrors.map(e => e.error.flatten()));
-                    }
-
-                    const validatedVariants = parsedVariants.map(result => result.data);
-                    for (const variant of validatedVariants) {
-                        if (variant) {
-                            const existingVariant = await this.variantRepository.findOne({ sku: variant.sku });
-                            if (existingVariant) {
-                                throw AppError.conflict(`Variant with SKU ${variant.sku} already exists`);
-                            }
-                        }
-                    }
-
-                    variants = await Promise.all(
-                        validatedVariants.map(async variant => {
-                            if (variant) {
-                                const createdVariant = await this.variantRepository.create({
-                                    ...variant,
-                                    productId: dto.id || new Date().toISOString(),
-                                    isInStock: variant.stockQuantity > 0,
-                                    createdAt: new Date().toISOString(),
-                                });
-                                return createdVariant;
-                            }
-                            throw AppError.badRequest('Invalid variant data');
-                        }),
-                    );
-                }
-
-                return this.productRepository.create({
-                    ...dto,
-                    variants,
-                    isInStock: dto.stockQuantity > 0,
-                    createdAt: new Date().toISOString(),
+                const duplicates = await this.variantRepository.findOne({
+                    sku: { $in: skus },
                 });
-            }),
-        );
-        return products;
-    }
+                if (duplicates) throw AppError.conflict("Variant SKU already exists");
 
-    async getProductById(id: string): Promise<Product> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
+                const variants = await Promise.all(
+                    validated.variants.map(async (v, i) => {
+                        const created = await this.variantRepository.create({
+                            ...v,
+                            isInStock: v.stockQuantity > 0,
+                            productId: product.id,
+                            sku: skus[i],
+                        });
+                        return created;
+                    }),
+                );
+                variantIds = variants.map((v) => v.id);
 
-        const product = await this.productRepository.findById(id);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-        return product;
-    }
-
-    async getProductBySlug(slug: string): Promise<Product> {
-        if (!slug || typeof slug !== 'string') {
-            throw AppError.badRequest('Invalid product slug');
-        }
-
-        const product = await this.productRepository.findBySlug(slug);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with slug ${slug} not found`);
-        }
-        return product;
-    }
-
-    async filterProducts(query: Record<string, string>) {
-        const categoryId = mongoose.isValidObjectId(query.category) ? query.category : undefined;
-        const minPrice = query.min_price ? Number(query.min_price) : 0.00001;
-        const maxPrice = query.max_price ? Number(query.max_price) : 100000000000000;
-        const sort = query.sort === "asc" ? 1 : -1;
-        const search = typeof query.search === "string" ? query.search?.trim() : undefined
-        const limit = Number(query.limit) || 10;
-        const page = Number(query.page) || 1;
-        const skip = (page - 1) * limit;
-
-        const filter: Record<string, any> = {};
-
-        if (categoryId) {
-            filter.category = categoryId;
-        }
-
-        filter.price = { $gte: minPrice, $lte: maxPrice };
-
-        if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } }
-            ];
-        }
-
-        const products = await this.productRepository.find(filter, undefined, {
-            limit,
-            skip,
-            sort: { featured: 1, name: sort, createdAt: sort }
-        });
-
-        const total = await this.productRepository.count(filter);
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-
-        return {
-            products,
-            total,
-            page,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPreviousPage: page > 1,
-        };
-    }
-    async getProductBySku(sku: string): Promise<Product> {
-        if (!sku || typeof sku !== 'string') {
-            throw AppError.badRequest('Invalid product SKU');
-        }
-
-        const product = await this.productRepository.findBySku(sku);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with SKU ${sku} not found`);
-        }
-        return product;
-    }
-
-    async searchProductsByNameOrDescription(query: string): Promise<Product[]> {
-        if (!query || typeof query !== 'string' || query.trim().length === 0) {
-            throw AppError.badRequest('Invalid search query');
-        }
-        const products = await this.productRepository.find({
-            $or: [
-                { name: { $regex: query, $options: 'i' } },
-                { description: { $regex: query, $options: 'i' } },
-            ],
-            status: 'active',
-            isDeleted: { $ne: true },
-        });
-        if (!products.length) {
-            throw AppError.notFound('No active products found matching the search query');
-        }
-        return products;
-    }
-
-    async getProductsByCategory(categoryId: string): Promise<Product[]> {
-        if (!categoryId || typeof categoryId !== 'string') {
-            throw AppError.badRequest('Invalid category ID');
-        }
-
-        const category = await this.categoryRepository.findById(categoryId);
-        if (!category) {
-            throw AppError.notFound(`Category with ID ${categoryId} not found`);
-        }
-
-        const products = await this.productRepository.findByCategory(categoryId);
-        if (!products.length) {
-            throw AppError.notFound(`No active products found for category ID ${categoryId}`);
-        }
-        return products;
-    }
-
-    async getActiveProducts(filter: FilterQuery<Product> = {}): Promise<Product[]> {
-        const products = await this.productRepository.findActive(filter);
-        if (!products.length) {
-            throw AppError.notFound('No active products found');
-        }
-        return products;
-    }
-
-    async getProductsByTags(tags: string[]): Promise<Product[]> {
-        if (!tags || !Array.isArray(tags) || tags.some(tag => typeof tag !== 'string')) {
-            throw AppError.badRequest('Invalid tags array');
-        }
-
-        const products = await this.productRepository.find({
-            tags: { $in: tags },
-            status: 'active',
-            isDeleted: { $ne: true },
-        });
-        if (!products.length) {
-            throw AppError.notFound('No active products found with specified tags');
-        }
-        return products;
-    }
-
-    async checkStockAvailability(productId: string, variantId?: string, quantity: number = 1): Promise<boolean> {
-        if (!productId || typeof productId !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
-        if (variantId && typeof variantId !== 'string') {
-            throw AppError.badRequest('Invalid variant ID');
-        }
-        if (typeof quantity !== 'number' || quantity < 1) {
-            throw AppError.badRequest('Invalid quantity');
-        }
-
-        const product = await this.productRepository.findById(productId);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${productId} not found`);
-        }
-
-        if (variantId) {
-            if (product.type !== 'configurable') {
-                throw AppError.badRequest('Product is not configurable, cannot check variant stock');
+                await this.productRepository.updateById(
+                    product.id,
+                    { $set: { variantIds: variantIds } },
+                    { session },
+                );
             }
-            const variant = await this.variantRepository.findById(variantId);
-            if (!variant || variant.productId !== productId) {
-                throw AppError.notFound(`Variant with ID ${variantId} not found for product ${productId}`);
-            }
-            return variant.stockQuantity >= quantity;
-        }
 
-        return product.stockQuantity >= quantity;
+            return product;
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        }
     }
 
     async updateProduct(id: string, dto: UpdateProductDto): Promise<Product> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
+        const validated = UpdateProductDtoSchema.parse(dto);
+        const session = await this.startTransaction();
+        try {
+            const product = await this.productRepository.findById(
+                id,
+                {},
+                { session },
+            );
+            if (!product || product.isDeleted)
+                throw AppError.notFound("Product not found");
 
-        const parsedDto = UpdateProductDtoSchema.safeParse(dto);
-        if (!parsedDto.success) {
-            throw AppError.badRequest('Invalid product update data', parsedDto.error.flatten());
-        }
-
-        const validatedDto = parsedDto.data;
-
-        const product = await this.productRepository.findById(id);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-
-        if (validatedDto.slug) {
-            const existingProduct = await this.productRepository.findOne({
-                slug: validatedDto.slug,
-                _id: { $ne: id },
-                isDeleted: { $ne: true },
-            });
-            if (existingProduct) {
-                throw AppError.conflict(`Product with slug ${validatedDto.slug} already exists`);
-            }
-        }
-
-        if (validatedDto.sku) {
-            const existingProduct = await this.productRepository.findOne({
-                sku: validatedDto.sku,
-                _id: { $ne: id },
-                isDeleted: { $ne: true },
-            });
-            if (existingProduct) {
-                throw AppError.conflict(`Product with SKU ${validatedDto.sku} already exists`);
-            }
-        }
-
-        if (validatedDto.categoryId) {
-            const category = await this.categoryRepository.findById(validatedDto.categoryId);
-            if (!category) {
-                throw AppError.notFound(`Category with ID ${validatedDto.categoryId} not found`);
-            }
-        }
-
-        let variants: ProductVariant[] = product.variants || [];
-        if (validatedDto.variants) {
-            const parsedVariants = validatedDto.variants.map(v => ProductVariantSchema.partial().safeParse(v));
-            const variantErrors = parsedVariants.filter(result => !result.success);
-            if (variantErrors.length > 0) {
-                throw AppError.badRequest('Invalid variant update data', variantErrors.map(e => e.error.flatten()));
+            if (validated.slug) {
+                const dup = await this.productRepository.findOne({
+                    slug: validated.slug,
+                    _id: { $ne: id },
+                    isDeleted: { $ne: true },
+                });
+                if (dup) throw AppError.conflict("Slug already exists");
             }
 
-            const validatedVariants = parsedVariants.map(result => result.data);
-            for (const variant of validatedVariants) {
-                if (variant && variant.sku) {
-                    const existingVariant = await this.variantRepository.findOne({
-                        sku: variant.sku,
-                        _id: { $ne: variant.id },
-                    });
-                    if (existingVariant) {
-                        throw AppError.conflict(`Variant with SKU ${variant.sku} already exists`);
+            if (validated.categoryId) {
+                const cat = await this.categoryRepository.findById(
+                    validated.categoryId,
+                );
+                if (!cat) throw AppError.notFound("Category not found");
+            }
+
+            const patch: any = { ...validated };
+            if (validated.stockQuantity !== undefined)
+                patch.isInStock = validated.stockQuantity > 0;
+            await this.productRepository.updateById(id, { $set: patch }, { session });
+
+            if (validated.variants) {
+                const incoming = validated.variants;
+                const existing = await this.variantRepository.find({ productId: id });
+                const toUpdate: any[] = [];
+                const toCreate: any[] = [];
+
+                incoming.forEach((v) => {
+                    if (v.id) {
+                        toUpdate.push(v);
+                    } else {
+                        toCreate.push({
+                            ...v,
+                            productId: id,
+                            sku: this.generateSku(v.name || product.name, "CAT", Date.now()),
+                            isInStock: (v.stockQuantity || 0) > 0,
+                        });
                     }
+                });
+
+                for (const v of toUpdate) {
+                    if (v.sku) {
+                        const dup = await this.variantRepository.findOne({
+                            sku: v.sku,
+                            _id: { $ne: v.id },
+                        });
+                        if (dup) throw AppError.conflict("SKU already exists");
+                    }
+                    await this.variantRepository.updateById(v.id, v, { session });
                 }
-                if (variant && variant.id) {
-                    await this.variantRepository.updateById(variant.id, {
-                        ...variant,
-                        isInStock: variant.stockQuantity !== undefined ? variant.stockQuantity > 0 : undefined,
-                        updatedAt: new Date().toISOString(),
+
+                if (toCreate.length) {
+                    const created = await Promise.all(
+                        toCreate.map(async (v) => {
+                            const variant = await this.variantRepository.create(v);
+                            return variant;
+                        }),
+                    );
+                    const newIds = created.map((c) => c.id);
+                    await this.productRepository.updateById(id, {
+                        $addToSet: { variants: { $each: newIds } },
                     });
-                } else if (variant) {
-                    const createdVariant = await this.variantRepository.create({
-                        ...variant,
-                        productId: id,
-                        isInStock: variant.stockQuantity !== undefined ? variant.stockQuantity > 0 : false,
-                        createdAt: new Date().toISOString(),
-                    });
-                    variants.push(createdVariant);
                 }
+            }
+            return product;
+        } catch (err) {
+            await session.abortTransaction();
+            throw err;
+        }
+    }
+
+    async getProductById(id: string): Promise<Product> {
+        const p = await this.productRepository.findById(id, undefined, {
+            populate: ["variants"],
+        });
+        if (!p || p.isDeleted) throw AppError.notFound("Product not found");
+        return p;
+    }
+
+    async getProductBySlug(slug: string): Promise<Product> {
+        const p = await this.productRepository.findOne(
+            { slug, isDeleted: { $ne: true } },
+            undefined,
+            {
+                populate: ["variants", "category"],
+            },
+        );
+        if (!p) throw AppError.notFound("Product not found");
+        return p;
+    }
+
+    async getProductBySku(sku: string): Promise<Product> {
+        const p = await this.productRepository.findOne(
+            { sku, isDeleted: { $ne: true } },
+            undefined,
+            {
+                populate: ["variants"],
+            },
+        );
+        if (!p) throw AppError.notFound("Product not found");
+        return p;
+    }
+
+    async filterProducts(
+        query: Record<string, string>,
+    ): Promise<PaginationResult<Product>> {
+        const categorySlug = query.category;
+        const minPrice = Number(query.min_price ?? 0);
+        const maxPrice = Number(query.max_price ?? Infinity);
+        const sortDir = query.sort === "asc" ? 1 : -1;
+        const search =
+            typeof query.search === "string" ? query.search.trim() : undefined;
+        const limit = Math.max(1, Number(query.limit) || 10);
+        const page = Math.max(1, Number(query.page) || 1);
+
+        const filter: any = { isDeleted: { $ne: true } };
+        filter.price = { $gte: minPrice, $lte: maxPrice };
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } },
+            ];
+        }
+        if (categorySlug && typeof categorySlug === "string") {
+            const category = await this.categoryRepository.findOne({
+                slug: { $regex: categorySlug, $options: "i" },
+            });
+            if (category) {
+                filter.categoryId = category.id;
             }
         }
 
-        const updatedProduct = await this.productRepository.updateProduct(id, {
-            ...validatedDto,
-            variants,
-            isInStock: validatedDto.stockQuantity !== undefined ? validatedDto.stockQuantity > 0 : undefined,
-            updatedAt: new Date().toISOString(),
+        const result = await this.productRepository.paginate({
+            filter,
+            limit,
+            page,
+            projection: {
+                seo: 0,
+            },
+            options: {
+                sort: { name: sortDir },
+                populate: ["variants", "category"],
+            },
         });
-        if (!updatedProduct) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-        return updatedProduct;
+
+        return result;
     }
 
-    async softDelete(id: string, deletedById: string): Promise<Product> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
-        if (!deletedById || typeof deletedById !== 'string') {
-            throw AppError.badRequest('Invalid deletedById');
-        }
-
-        const product = await this.productRepository.findById(id);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-
-        if (product.variants && product.variants.length > 0) {
-            await Promise.all(
-                product.variants.map(variant =>
-                    this.variantRepository.updateById(variant.id, { $set: { isDeleted: true, deletedAt: new Date().toISOString(), deletedById } }),
-                ),
-            );
-        }
-
-        const deletedProduct = await this.productRepository.softDelete(id, deletedById);
-        if (!deletedProduct) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-        return deletedProduct;
-    }
-
-    async bulkSoftDelete(ids: string[], deletedById: string): Promise<Product[]> {
-        if (!ids || !Array.isArray(ids) || ids.some(id => typeof id !== 'string')) {
-            throw AppError.badRequest('Invalid product IDs array');
-        }
-        if (!deletedById || typeof deletedById !== 'string') {
-            throw AppError.badRequest('Invalid deletedById');
-        }
-
-        const products = await this.productRepository.find({ _id: { $in: ids }, isDeleted: { $ne: true } });
-        if (!products.length) {
-            throw AppError.notFound('No products found for provided IDs');
-        }
-
-        const deletedProducts = await Promise.all(
-            products.map(async product => {
-                if (product.variants && product.variants.length > 0) {
-                    await Promise.all(
-                        product.variants.map(variant =>
-                            this.variantRepository.updateById(variant.id, { $set: { isDeleted: true, deletedAt: new Date().toISOString(), deletedById } }),
-                        ),
-                    );
-                }
-                return this.productRepository.softDelete(product.id, deletedById);
-            }),
+    async searchProductsByNameOrDescription(q: string): Promise<Product[]> {
+        if (!q?.trim()) throw AppError.badRequest("Invalid query");
+        return this.productRepository.find(
+            {
+                $or: [
+                    { name: { $regex: q, $options: "i" } },
+                    { description: { $regex: q, $options: "i" } },
+                ],
+                status: "active",
+                isDeleted: { $ne: true },
+            },
+            undefined,
+            { limit: 50 },
         );
-        return deletedProducts.filter((p): p is Product => p !== null);
     }
 
-    async restoreProduct(id: string, restoredById: string): Promise<Product> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
-        if (!restoredById || typeof restoredById !== 'string') {
-            throw AppError.badRequest('Invalid restoredById');
-        }
-
-        const product = await this.productRepository.findById(id);
-        if (!product) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-        if (!product.isDeleted) {
-            throw AppError.badRequest(`Product with ID ${id} is not deleted`);
-        }
-
-        if (product.variants && product.variants.length > 0) {
-            await Promise.all(
-                product.variants.map(variant =>
-                    this.variantRepository.updateById(variant.id, { $set: { isDeleted: false, deletedAt: null, deletedById: null } }),
-                ),
-            );
-        }
-
-        const restoredProduct = await this.productRepository.updateById(id, {
-            $set: { isDeleted: false, deletedAt: null, deletedById: null, updatedById: restoredById },
+    async getProductsByCategory(categoryId: string): Promise<Product[]> {
+        return this.productRepository.find({
+            categoryId,
+            isDeleted: { $ne: true },
         });
-        if (!restoredProduct) {
-            throw AppError.notFound(`Product with ID ${id} not found`);
-        }
-        return restoredProduct;
     }
 
-    async addVariant(productId: string, variant: Partial<ProductVariant>): Promise<Product> {
-        if (!productId || typeof productId !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
+    async getActiveProducts(filter = {}): Promise<PaginationResult<Product>> {
+        const result = this.filterProducts(filter);
+        return result;
+    }
 
-        const parsedVariant = ProductVariantSchema.omit({ id: true, productId: true, createdAt: true, updatedAt: true, isInStock: true }).safeParse(variant);
-        if (!parsedVariant.success) {
-            throw AppError.badRequest('Invalid variant data', parsedVariant.error.flatten());
-        }
+    async getProductsByTags(tags: string[]): Promise<PaginationResult<Product>> {
+        if (!Array.isArray(tags)) throw AppError.badRequest("Invalid tags");
+        const result = this.productRepository.paginate({
+            filter: {
+                tags: { $in: tags },
+                status: "active",
+                isDeleted: { $ne: true },
+            },
+        });
+        return result;
+    }
 
-        const validatedVariant = parsedVariant.data;
+    async checkStockAvailability(
+        productId: string,
+        variantId?: string,
+        quantity = 1,
+    ) {
+        if (quantity < 1) throw AppError.badRequest("Invalid quantity");
 
-        const product = await this.productRepository.findById(productId);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${productId} not found`);
+        if (!variantId) {
+            const product = await this.getProductById(productId);
+            return product.stockQuantity >= quantity;
         }
-        if (product.type !== 'configurable') {
-            throw AppError.badRequest('Variants can only be added to configurable products');
-        }
+        const variant = await this.variantRepository.findById(variantId);
+        if (!variant || variant.productId !== productId)
+            throw AppError.notFound("Variant not found");
+        return variant.stockQuantity >= quantity;
+    }
 
-        const existingVariant = await this.variantRepository.findOne({ sku: validatedVariant.sku });
-        if (existingVariant) {
-            throw AppError.conflict(`Variant with SKU ${validatedVariant.sku} already exists`);
-        }
+    async addVariant(productId: string, dto: Omit<ProductVariant, "id">) {
+        const product = await this.getProductById(productId);
+        if (product.type !== "configurable")
+            throw AppError.badRequest("Not configurable");
 
-        const createdVariant = await this.variantRepository.create({
-            ...validatedVariant,
+        const exists = await this.variantRepository.findOne({ sku: dto.sku });
+        if (exists) throw AppError.conflict("SKU already exists");
+
+        const variant = await this.variantRepository.create({
+            ...dto,
             productId,
-            isInStock: validatedVariant.stockQuantity > 0,
-            createdAt: new Date().toISOString(),
+            isInStock: dto.stockQuantity > 0,
         });
 
-        const updatedProduct = await this.productRepository.addVariant(productId, createdVariant);
-        if (!updatedProduct) {
-            await this.variantRepository.deleteById(createdVariant.id);
-            throw AppError.notFound(`Product with ID ${productId} not found`);
-        }
-        return updatedProduct;
+        await this.productRepository.updateById(productId, {
+            $addToSet: { variants: variant.id },
+        });
+        return this.getProductById(productId);
     }
 
-    async updateVariant(productId: string, variantId: string, variantUpdate: Partial<ProductVariant>): Promise<Product> {
-        if (!productId || typeof productId !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
-        if (!variantId || typeof variantId !== 'string') {
-            throw AppError.badRequest('Invalid variant ID');
-        }
-
-        const parsedVariant = ProductVariantSchema.partial().safeParse(variantUpdate);
-        if (!parsedVariant.success) {
-            throw AppError.badRequest('Invalid variant update data', parsedVariant.error.flatten());
-        }
-
-        const validatedVariant = parsedVariant.data;
-
-        const product = await this.productRepository.findById(productId);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${productId} not found`);
-        }
-        if (product.type !== 'configurable') {
-            throw AppError.badRequest('Product is not configurable, cannot update variants');
-        }
+    async updateVariant(
+        productId: string,
+        variantId: string,
+        update: Partial<ProductVariant>,
+    ) {
+        const product = await this.getProductById(productId);
+        if (product.type !== "configurable")
+            throw AppError.badRequest("Not configurable");
 
         const variant = await this.variantRepository.findById(variantId);
-        if (!variant || variant.productId !== productId) {
-            throw AppError.notFound(`Variant with ID ${variantId} not found for product ${productId}`);
-        }
+        if (!variant || variant.productId !== productId)
+            throw AppError.notFound("Variant not found");
 
-        if (validatedVariant.sku) {
-            const existingVariant = await this.variantRepository.findOne({
-                sku: validatedVariant.sku,
+        if (update.sku) {
+            const dup = await this.variantRepository.findOne({
+                sku: update.sku,
                 _id: { $ne: variantId },
             });
-            if (existingVariant) {
-                throw AppError.conflict(`Variant with SKU ${validatedVariant.sku} already exists`);
-            }
+            if (dup) throw AppError.conflict("SKU already exists");
         }
 
-        const updatedVariant = await this.variantRepository.updateById(variantId, {
-            ...validatedVariant,
-            isInStock: validatedVariant.stockQuantity !== undefined ? validatedVariant.stockQuantity > 0 : undefined,
-            updatedAt: new Date().toISOString(),
+        await this.variantRepository.updateById(variantId, {
+            ...update,
+            ...(update.stockQuantity !== undefined && {
+                isInStock: update.stockQuantity > 0,
+            }),
         });
-        if (!updatedVariant) {
-            throw AppError.notFound(`Variant with ID ${variantId} not found`);
-        }
-
-        return product;
+        return this.getProductById(productId);
     }
 
     async deleteVariant(productId: string, variantId: string): Promise<Product> {
-        if (!productId || typeof productId !== 'string') {
-            throw AppError.badRequest('Invalid product ID');
-        }
-        if (!variantId || typeof variantId !== 'string') {
-            throw AppError.badRequest('Invalid variant ID');
-        }
-
-        const product = await this.productRepository.findById(productId);
-        if (!product || product.isDeleted) {
-            throw AppError.notFound(`Product with ID ${productId} not found`);
-        }
-        if (product.type !== 'configurable') {
-            throw AppError.badRequest('Product is not configurable, cannot delete variants');
-        }
-        if (!product.variants || !product.variants.some(v => v.id === variantId)) {
-            throw AppError.notFound(`Variant with ID ${variantId} not found for product ${productId}`);
-        }
-        if (product.variants.length <= 1) {
-            throw AppError.badRequest('Configurable products must retain at least one variant');
-        }
+        const product = await this.getProductById(productId);
+        if (product.type !== "configurable")
+            throw AppError.badRequest("Not configurable");
 
         const variant = await this.variantRepository.findById(variantId);
-        if (!variant || variant.productId !== productId) {
-            throw AppError.notFound(`Variant with ID ${variantId} not found for product ${productId}`);
-        }
+        if (!variant || variant.productId !== productId)
+            throw AppError.notFound("Variant not found");
 
-        const deleted = await this.variantRepository.deleteById(variantId);
-        if (!deleted) {
-            throw AppError.notFound(`Variant with ID ${variantId} not found`);
-        }
+        const remaining = await this.variantRepository.count({ productId });
+        if (remaining <= 1) throw AppError.badRequest("Need at least one variant");
 
-        const updatedProduct = await this.productRepository.deleteVariant(productId, variantId);
-        if (!updatedProduct) {
-            throw AppError.notFound(`Product with ID ${productId} not found`);
-        }
-        return updatedProduct;
+        await this.variantRepository.deleteById(variantId);
+        await this.productRepository.updateById(productId, {
+            $pull: { variants: variantId },
+        });
+        return this.getProductById(productId);
     }
 
-    async createCategory(dto: CreateProductCategoryDto): Promise<ProductCategory> {
-        const parsedDto = CreateProductCategoryDtoSchema.safeParse(dto);
-        if (!parsedDto.success) {
-            throw AppError.badRequest('Invalid category data', parsedDto.error.flatten());
-        }
-
-        const validatedDto = parsedDto.data;
-        console.log(validatedDto)
-        const existingCategory = await this.categoryRepository.findOne({
-            slug: validatedDto.slug,
+    async createCategory(
+        dto: CreateProductCategoryDto,
+    ): Promise<ProductCategory> {
+        const validated = CreateProductCategoryDtoSchema.parse(dto);
+        const exists = await this.categoryRepository.findOne({
+            slug: validated.slug,
         });
-        if (existingCategory) {
-            throw AppError.conflict(`Category with slug ${validatedDto.slug} already exists`);
+        if (exists) throw AppError.conflict("Slug already exists");
+        if (validated.parentId) {
+            const parent = await this.categoryRepository.findById(validated.parentId);
+            if (!parent) throw AppError.notFound("Parent category not found");
         }
-
-        if (validatedDto.parentId) {
-            const parentCategory = await this.categoryRepository.findById(validatedDto.parentId);
-            if (!parentCategory) {
-                throw AppError.notFound(`Parent category with ID ${validatedDto.parentId} not found`);
-            }
-        }
-
-        const category = await this.categoryRepository.create({
-            ...validatedDto,
-            createdAt: new Date().toISOString(),
-        });
-        return category;
+        return this.categoryRepository.create(validated);
     }
 
-    async updateCategory(id: string, dto: UpdateProductCategoryDto): Promise<ProductCategory> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid category ID');
-        }
-
-        const parsedDto = UpdateProductCategoryDtoSchema.safeParse(dto);
-        if (!parsedDto.success) {
-            throw AppError.badRequest('Invalid category update data', parsedDto.error.flatten());
-        }
-
-        const validatedDto = parsedDto.data;
-
+    async updateCategory(
+        id: string,
+        dto: UpdateProductCategoryDto,
+    ): Promise<ProductCategory> {
+        const validated = UpdateProductCategoryDtoSchema.parse(dto);
         const category = await this.categoryRepository.findById(id);
-        if (!category) {
-            throw AppError.notFound(`Category with ID ${id} not found`);
-        }
+        if (!category) throw AppError.notFound("Category not found");
 
-        if (validatedDto.slug) {
-            const existingCategory = await this.categoryRepository.findOne({
-                slug: validatedDto.slug,
+        if (validated.slug) {
+            const dup = await this.categoryRepository.findOne({
+                slug: validated.slug,
                 _id: { $ne: id },
             });
-            if (existingCategory) {
-                throw AppError.conflict(`Category with slug ${validatedDto.slug} already exists`);
-            }
+            if (dup) throw AppError.conflict("Slug already exists");
         }
-
-        if (validatedDto.parentId) {
-            const parentCategory = await this.categoryRepository.findById(validatedDto.parentId);
-            if (!parentCategory) {
-                throw AppError.notFound(`Parent category with ID ${validatedDto.parentId} not found`);
-            }
-            if (validatedDto.parentId === id) {
-                throw AppError.badRequest('Category cannot be its own parent');
-            }
+        if (validated.parentId) {
+            if (validated.parentId === id)
+                throw AppError.badRequest("Cannot be own parent");
+            const parent = await this.categoryRepository.findById(validated.parentId);
+            if (!parent) throw AppError.notFound("Parent category not found");
         }
-
-        const updatedCategory = await this.categoryRepository.updateById(id, {
-            ...validatedDto,
-            updatedAt: new Date().toISOString(),
-        });
+        const updatedCategory = await this.categoryRepository.updateById(
+            id,
+            validated,
+        );
         if (!updatedCategory) {
-            throw AppError.notFound(`Category with ID ${id} not found`);
+            throw AppError.badGateway("error updating category");
         }
         return updatedCategory;
     }
 
-    async getCategoryById(id: string): Promise<ProductCategory> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid category ID');
-        }
-
-        const category = await this.categoryRepository.findById(id);
-        if (!category) {
-            throw AppError.notFound(`Category with ID ${id} not found`);
-        }
-        return category;
+    async getCategoryById(id: string) {
+        const c = await this.categoryRepository.findById(id);
+        if (!c) throw AppError.notFound("Category not found");
+        return c;
     }
 
-    async getCategoryBySlug(slug: string): Promise<ProductCategory> {
-        if (!slug || typeof slug !== 'string') {
-            throw AppError.badRequest('Invalid category slug');
-        }
-
-        const category = await this.categoryRepository.findOne({ slug });
-        if (!category) {
-            throw AppError.notFound(`Category with slug ${slug} not found`);
-        }
-        return category;
+    async getCategoryBySlug(slug: string) {
+        const c = await this.categoryRepository.findOne({ slug });
+        if (!c) throw AppError.notFound("Category not found");
+        return c;
     }
 
-    async getAllCategories(): Promise<ProductCategory[]> {
-        const categories = await this.categoryRepository.find();
-        if (!categories.length) {
-            throw AppError.notFound('No categories found');
-        }
-        return categories;
+    async getAllCategories(): Promise<PaginationResult<ProductCategory>> {
+        const result = this.categoryRepository.paginate();
+        return result;
     }
 
-    async getParentCategories(): Promise<ProductCategory[]> {
-        const categories = await this.categoryRepository.find({ parentId: null });
-        if (!categories.length) {
-            throw AppError.notFound('No parent categories found');
-        }
-        return categories;
-    }
+    async getParentCategories() { }
 
-    async getSubcategories(parentId: string): Promise<ProductCategory[]> {
-        if (!parentId || typeof parentId !== 'string') {
-            throw AppError.badRequest('Invalid parent category ID');
-        }
-
-        const parentCategory = await this.categoryRepository.findById(parentId);
-        if (!parentCategory) {
-            throw AppError.notFound(`Parent category with ID ${parentId} not found`);
-        }
-
-        const subcategories = await this.categoryRepository.find({ parentId });
-        if (!subcategories.length) {
-            throw AppError.notFound(`No subcategories found for parent category ID ${parentId}`);
-        }
-        return subcategories;
+    async getSubcategories(parentId: string) {
+        return this.categoryRepository.paginate({ filter: { parentId } });
     }
 
     async deleteCategory(id: string): Promise<void> {
-        if (!id || typeof id !== 'string') {
-            throw AppError.badRequest('Invalid category ID');
-        }
+        const children = await this.categoryRepository.find({ parentId: id });
+        if (children.length) throw AppError.badRequest("Has sub-categories");
 
-        const category = await this.categoryRepository.findById(id);
-        if (!category) {
-            throw AppError.notFound(`Category with ID ${id} not found`);
-        }
+        const products = await this.productRepository.find({ categoryId: id });
+        if (products.length) throw AppError.badRequest("Has products");
 
-        const childCategories = await this.categoryRepository.find({ parentId: id });
-        if (childCategories.length > 0) {
-            throw AppError.badRequest('Cannot delete category with subcategories');
-        }
+        await this.categoryRepository.deleteById(id);
+    }
+    async addBanner(data: unknown) {
+        const banner = BannerSchema.omit({ slug: true, id: true }).parse(data);
+        const slug = banner.title
+            .replace("/[^a-z0-9]+/g", "-")
+            .replace("/^-+|-+$/g", "").replace("&", "and").split(" ").join("-");
+        const newBanner = await this.bannersRepository.create({ ...banner, slug });
+        return newBanner;
+    }
+    async deleteBanner(id: string) {
+        return await this.bannersRepository.deleteById(id);
+    }
+    async updateBanner(id: string, data: Partial<Banner>) {
+        const updated = await this.bannersRepository.updateById(id, data);
+        return updated;
+    }
+    async getBanners() {
+        const result = await this.bannersRepository.paginate();
+        return result;
+    }
 
-        const products = await this.productRepository.findByCategory(id);
-        if (products.length > 0) {
-            throw AppError.badRequest('Cannot delete category with associated products');
-        }
+    private async startTransaction(): Promise<ClientSession> {
+        const conn =
+            (this.productRepository as any).model?.db ||
+            (this.productRepository as any).collection.conn;
+        const session = await conn.startSession();
+        session.startTransaction();
+        return session;
+    }
 
-        const deleted = await this.categoryRepository.deleteById(id);
-        if (!deleted) {
-            throw AppError.notFound(`Category with ID ${id} not found`);
-        }
+    private generateSku(name: string, category: string, num: number): string {
+        const clean = (s: string) =>
+            s
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "")
+                .slice(0, 3);
+        return `SKU-${clean(category)}-${clean(name)}-${num}`;
     }
 }
