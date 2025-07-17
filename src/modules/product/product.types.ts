@@ -72,6 +72,9 @@ export const ProductVariantSchema = z.object({
     weight: z.number().positive().optional(),
     weightUnit: z.string().optional(),
     dimensions: DimensionsSchema.optional(),
+    isDeleted: z.boolean().default(false),
+    deletedAt: z.date().optional(),
+    deletedById: z.string().optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime().optional(),
 });
@@ -94,7 +97,7 @@ export const ProductSchema = z
         discountStartDate: z.string().datetime().optional(),
         discountEndDate: z.string().datetime().optional(),
         categoryId: z.string(),
-        category: ProductCategorySchema.optional(),
+        category: ProductCategorySchema,
         brand: z.string().min(1).optional(),
         tags: z.array(z.string()).optional(),
         images: z.array(ImageSchema).min(1),
@@ -106,6 +109,7 @@ export const ProductSchema = z
         featured: z.boolean(),
         stockQuantity: z.number().int().min(0),
         isInStock: z.boolean(),
+        variantIds: z.array(z.string()),
         variants: z.array(ProductVariantSchema).optional(),
         weight: z.number().positive().optional(),
         weightUnit: z.string().optional(),
@@ -150,7 +154,19 @@ export const ProductSchema = z
         }
     });
 
-export const ProductCategoryResponseDtoSchema = ProductCategorySchema;
+export const BannerSchema = z.object({
+    id: z.string(),
+    slug:z.string().describe("banner unique slug"),
+    title: z.string().describe("Banner Tittle"),
+    subtitle: z.string().describe("banner subtitle"),
+    description: z.string().describe("banner description"),
+    image: z.string().describe("banner image"),
+    cta: z.string().describe("banner cta"),
+    link: z.string().describe("banner redirection link"),
+    color: z.string().optional().describe("white").describe("banner main color"),
+});
+
+export type Banner = z.infer<typeof BannerSchema>;
 export type ProductStatus = z.infer<typeof ProductStatusSchema>;
 export type ProductVisibility = z.infer<typeof ProductVisibilitySchema>;
 export type ProductCondition = z.infer<typeof ProductConditionSchema>;
