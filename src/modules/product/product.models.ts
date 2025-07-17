@@ -1,123 +1,131 @@
-import { Schema, model, Document, Types, models } from "mongoose";
+import mongoose, { Schema, model, Document, models } from "mongoose";
 import {
+    Banner,
     ImageMeta,
     Product,
     ProductCategory,
     ProductVariant,
 } from "./product.types";
 
-export type ProductCategoryDocument = ProductCategory &
-    Document<ProductCategory>;
-export type ProductVariantDocument = ProductVariant & Document<ProductVariant>;
-export type ProductDocument = Product & Document<Product>;
-
 const ImageSchema = new Schema<ImageMeta>(
-    {
-        url: { type: String, required: true },
-        altText: { type: String },
-    },
-    { timestamps: false, _id: false, versionKey: false },
-);
-
-const DimensionsSchema = new Schema(
-    {
-        length: { type: Number, required: true, min: 0 },
-        width: { type: Number, required: true, min: 0 },
-        height: { type: Number, required: true, min: 0 },
-        unit: { type: String },
-    },
-    { timestamps: false, _id: false, versionKey: false },
+    { url: { type: String, required: true }, altText: String },
+    { _id: false, versionKey: false },
 );
 
 const SeoSchema = new Schema(
-    {
-        title: { type: String, maxlength: 70 },
-        description: { type: String, maxlength: 160 },
-        metaKeywords: [{ type: String }],
-    },
-    { timestamps: false, _id: false, versionKey: false },
+    { title: String, description: String, metaKeywords: [String] },
+    { _id: false, versionKey: false },
 );
 
+export type ProductCategoryDocument = ProductCategory & Document;
 const ProductCategorySchema = new Schema<ProductCategoryDocument>(
     {
-        name: { type: String, required: true, minlength: 1 },
-        slug: {
-            type: String,
-            required: true,
-            minlength: 1,
-            match: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        },
-        description: { type: String },
-        parentId: { type: String },
-        image: { type: ImageSchema },
-        seo: { type: SeoSchema },
+        name: { type: String, required: true, trim: true },
+        slug: { type: String, required: true, unique: true, lowercase: true },
+        description: String,
+        parentId: { type: Schema.Types.ObjectId, ref: "ProductCategory" },
+        image: ImageSchema,
+        seo: SeoSchema,
     },
     {
         timestamps: true,
+        versionKey: false,
         toJSON: {
+            virtuals: true,
             transform: (_, ret) => {
                 ret.id = ret._id;
                 delete ret._id;
             },
-            versionKey: false,
         },
     },
 );
 
+type BannerDocument = Banner & Document;
+
+const BannerSchema = new Schema<BannerDocument>(
+    {
+        title: { type: String, required: true, trim: true },
+        subtitle: { type: String, required: true, unique: true, lowercase: true },
+        slug: { type: String, required: true, unique: true, lowercase: true },
+        description: String,
+        cta: { type: String },
+        image: {type:String},
+        color: { type: String },
+        link:{type:String}
+    },
+    {
+        timestamps: true,
+        versionKey: false,
+        toJSON: {
+            virtuals: true,
+            transform: (_, ret) => {
+                ret.id = ret._id;
+                delete ret._id;
+            },
+        },
+    },
+);
+
+export const BannerModel = models.Banner || model("Banner", BannerSchema);
+
+export const ProductCategoryModel =
+    models.ProductCategory ||
+    model<ProductCategoryDocument>("ProductCategory", ProductCategorySchema);
+
+export type ProductVariantDocument = ProductVariant & Document;
 const ProductVariantSchema = new Schema<ProductVariantDocument>(
     {
-        productId: { type: String, required: true },
-        sku: { type: String, required: true, minlength: 1, maxlength: 50 },
-        name: { type: String },
+        productId: {
+            type: String,
+            ref: "Product",
+            required: true,
+            index: true,
+        },
+        sku: { type: String, required: true, unique: true },
+        name: String,
         price: { type: Number, required: true, min: 0 },
-        currency: { type: String, required: true, length: 3 },
-        discountPrice: { type: Number, min: 0 },
-        discountPercentage: { type: Number, min: 0, max: 100 },
-        discountFixedAmount: { type: Number, min: 0 },
-        attributes: { type: Map, of: String },
-        stockQuantity: { type: Number, required: true, min: 0, default: 0 },
+        currency: { type: String, required: true },
+        stockQuantity: { type: Number, required: true, min: 0 },
         isInStock: { type: Boolean, required: true, default: false },
-        images: [{ type: ImageSchema }],
-        thumbnail: { type: ImageSchema },
-        weight: { type: Number, min: 0 },
-        weightUnit: { type: String },
-        dimensions: { type: DimensionsSchema },
+        attributes: { type: Map, of: String },
+        images: [ImageSchema],
+        thumbnail: ImageSchema,
+        weight: Number,
+        dimensions: {
+            length: Number,
+            width: Number,
+            height: Number,
+            unit: String,
+        },
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: Date,
+        deletedById: String,
     },
     {
         timestamps: true,
+        versionKey: false,
         toJSON: {
+            virtuals: true,
             transform: (_, ret) => {
                 ret.id = ret._id;
                 delete ret._id;
             },
-            versionKey: false,
         },
     },
 );
+export const ProductVariantModel =
+    models.ProductVariant ||
+    model<ProductVariantDocument>("ProductVariant", ProductVariantSchema);
 
+export type ProductDocument = Product & Document;
 const ProductSchema = new Schema<ProductDocument>(
     {
-        name: { type: String, required: true, minlength: 1 },
-        description: { type: String, required: true, minlength: 1 },
-        slug: {
-            type: String,
-            required: true,
-            minlength: 1,
-            match: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        },
-        sku: { type: String, required: true, minlength: 1, maxlength: 50 },
+        name: { type: String, required: true, trim: true },
+        description: { type: String, required: true },
+        slug: { type: String, required: true, unique: true, lowercase: true },
+        sku: { type: String, required: true, unique: true },
         price: { type: Number, required: true, min: 0 },
-        currency: { type: String, required: true, length: 3 },
-        discountPercentage: { type: Number, min: 0, max: 100 },
-        discountFixedAmount: { type: Number, min: 0 },
-        discountStartDate: { type: Date },
-        discountEndDate: { type: Date },
-        categoryId: { type: String, required: true },
-        category: { type: ProductCategorySchema },
-        brand: { type: String, minlength: 1 },
-        tags: [{ type: String }],
-        images: [{ type: ImageSchema, required: true }],
-        thumbnail: { type: ImageSchema, required: true },
+        currency: { type: String, required: true },
         type: {
             type: String,
             enum: ["simple", "configurable", "virtual", "downloadable"],
@@ -134,37 +142,59 @@ const ProductSchema = new Schema<ProductDocument>(
             required: true,
         },
         condition: { type: String, enum: ["new", "used", "refurbished"] },
-        featured: { type: Boolean, required: true, default: false },
-        stockQuantity: { type: Number, required: true, min: 0, default: 0 },
+        featured: { type: Boolean, default: false },
+        stockQuantity: { type: Number, required: true, min: 0 },
         isInStock: { type: Boolean, required: true, default: false },
-        variants: [{ type: ProductVariantSchema }],
-        weight: { type: Number, min: 0 },
-        weightUnit: { type: String },
-        dimensions: { type: DimensionsSchema },
-        seo: { type: SeoSchema },
+        categoryId: {
+            type: String,
+            ref: "ProductCategory",
+            required: true,
+        },
+        brand: String,
+        tags: [String],
+        images: [ImageSchema],
+        thumbnail: ImageSchema,
+        weight: Number,
+        dimensions: {
+            length: Number,
+            width: Number,
+            height: Number,
+            unit: String,
+        },
+        seo: SeoSchema,
         createdById: { type: String, required: true },
-        updatedById: { type: String },
-        isDeleted: { type: Boolean, default: false },
-        deletedAt: { type: Date },
-        deletedById: { type: String },
+        updatedById: String,
+        isDeleted: { type: Boolean, default: false, index: true },
+        deletedAt: Date,
+        deletedById: String,
+        variantIds: [{ type: Schema.Types.ObjectId, ref: "ProductVariant" }],
     },
     {
+        timestamps: true,
+        versionKey: false,
         toJSON: {
+            virtuals: true,
             transform: (_, ret) => {
                 ret.id = ret._id;
                 delete ret._id;
             },
-            versionKey: false,
         },
-        timestamps: true,
     },
 );
 
-export const ProductCategoryModel =
-    models.ProductCategory ||
-    model<ProductCategoryDocument>("ProductCategory", ProductCategorySchema);
-export const ProductVariantModel =
-    models.ProductVariant ||
-    model<ProductVariantDocument>("ProductVariant", ProductVariantSchema);
+ProductSchema.virtual("variants", {
+    ref: "ProductVariant",
+    localField: "variantIds",
+    foreignField: "_id",
+    applyToArray: true,
+});
+
+ProductSchema.virtual("category", {
+    ref: "ProductCategory",
+    localField: "categoryId",
+    foreignField: "_id",
+    justOne: true,
+});
+
 export const ProductModel =
     models.Product || model<ProductDocument>("Product", ProductSchema);
