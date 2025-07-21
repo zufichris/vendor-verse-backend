@@ -226,7 +226,7 @@ const userSchema = new Schema<UserDocument>(
     {
         timestamps: true,
         toJSON: {
-            transform: function(_, ret) {
+            transform: function(_, ret:any) {
                 delete ret.password;
                 delete ret.twoFactorSecret;
                 delete ret.verificationTokens;
