@@ -113,7 +113,6 @@ export function createProductRouter(
 
     router.get(
         "/categories",
-        authMiddleware.requireAuth,
         productController.getAllCategories,
     );
 
