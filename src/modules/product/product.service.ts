@@ -323,6 +323,20 @@ export class ProductService {
         return variant.stockQuantity >= quantity;
     }
 
+    async decrementStock(
+        productId: string,
+        variantId?: string,
+        quantity = 1,
+    ): Promise<void> {
+        if (variantId) {
+            await this.variantRepository.updateById(variantId, {
+                $inc: { stockQuantity: -quantity },
+            });
+            return;
+        }
+        await this.productRepository.updateById(productId, { $inc: { stockQuantity: -quantity } });
+    }
+
     async addVariant(productId: string, dto: Omit<ProductVariant, "id">) {
         const product = await this.getProductById(productId);
         if (product.type !== "configurable")
