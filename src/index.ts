@@ -5,19 +5,24 @@ import {
   handleUncaughtException,
   handleUnhandledRejection,
   notFoundMiddleware,
-} from "./core/middleware/error.middleware";
+  localizationMiddleware,
+} from "./core/middleware/";
 import { env } from "./config";
 import { logger } from "./logger";
 import { routesv1 } from "./routes/v1";
 import dotenv from "dotenv";
 import { DB } from "./database";
+
 dotenv.config();
-new DB(env.mongo_uri).connect()
+new DB(env.mongo_uri).connect();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(localizationMiddleware);
+
 app.use("/api/v1", routesv1);
+
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 handleUnhandledRejection();
