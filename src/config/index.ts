@@ -40,6 +40,8 @@ const ENVSchema = z.object({
     url: z.string().url({
         message: "Missing URL in .env. Required for base URL.",
     }),
+    client_url: z.string().url().optional().describe("client url"),
+    stripe_apikey: z.string().describe("stripe api key"),
 });
 
 export type TENV = z.infer<typeof ENVSchema>;
@@ -56,7 +58,7 @@ export const env: TENV = {
     google_client_secret: parsed?.GOOGLE_CLIENT_SECRET ?? "",
     jwt_secret: parsed?.JWT_SECRET ?? "",
     url,
+    stripe_apikey:parsed!.STRIPE_APIKEY
 };
 
 ENVSchema.parse(env);
-
