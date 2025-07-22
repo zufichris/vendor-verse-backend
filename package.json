@@ -33,6 +33,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.1",
@@ -49,7 +50,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
-    "dotenv": "^16.4.5",
     "http-terminator": "^3.2.0",
     "i": "^0.3.7",
     "jest": "^29.7.0",

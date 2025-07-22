@@ -13,7 +13,7 @@ export const localizationMiddleware = ApiHandler(async (req, _, next) => {
   const { locale } = req.params;
 
   req.locale =
-    Languages.find((l) => l.code === (locale as string).toLowerCase())?.code ||
+    Languages.find((l) => l.code === (locale as string)?.toLowerCase())?.code ||
     "en";
   next();
 });
