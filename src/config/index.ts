@@ -52,7 +52,7 @@ const url = (in_prod ? process.env.URL_PROD : process.env.URL_DEV)!;
 export const env: TENV = {
   in_prod,
   port: Number(process.env.PORT)!,
-  mongo_uri: process.env.MONGO_URI!,
+  mongo_uri: process.env.MONGODB_URI!,
   google_callback_url: process.env.GOOGLE_CALLBACK_URL!,
   google_client_id: process.env.GOOGLE_CLIENT_ID!,
   google_client_secret: process.env.GOOGLE_CLIENT_SECRET!,
