@@ -6,10 +6,10 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "src/shared/express"],
-    "types": ["node", "express", "jest"],
+    "typeRoots": ["./node_modules/@types", "./src/core/types/"],
+    "types": ["node"],
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
 }

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { z } from "zod";
+dotenv.config();
 
 const ENVSchema = z.object({
   in_prod: z.boolean().optional(),
