@@ -230,7 +230,7 @@ export class ProductService {
         const sortDir = query.sort === "asc" ? 1 : -1;
         const search =
             typeof query.search === "string" ? query.search.trim() : undefined;
-        const limit = Math.max(1, Number(query.limit) || 10);
+        const limit = Math.max(1, Number(query.limit) || 20);
         const page = Math.max(1, Number(query.page) || 1);
 
         const filter: any = { isDeleted: { $ne: true } };
