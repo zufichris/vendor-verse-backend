@@ -71,6 +71,18 @@ export class ProductController {
             },
         });
     });
+ public getRecommendedProducts = ApiHandler(async (req, res) => {
+        const query = req.query;
+        const result = await this.productService.getRecommendedProducts(
+            query as Record<string, string>,
+        );
+        res.status(200).json({
+            status: 200,
+            success: true,
+            message: "recommended products retrieved successfully",
+            data: result,
+        });
+    });
 
     public filterProducts = ApiHandler(async (req, res) => {
         const query = req.query;
