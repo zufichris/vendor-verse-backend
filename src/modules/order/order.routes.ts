@@ -7,12 +7,15 @@ export function createOrderRouter(
   authMw: AuthMiddleware,
 ) {
   const router = Router();
+
+  router.use(authMw.requireAuth);
+
   router
     .route("/")
     .post(ctrl.createOrder)
     .get(authMw.requireAuth, ctrl.getMyOrders);
 
-  router.route("/:id").patch(authMw.requireAuth, ctrl.updateOrder);
+  router.route("/:id").patch(ctrl.updateOrder);
 
   return router;
 }

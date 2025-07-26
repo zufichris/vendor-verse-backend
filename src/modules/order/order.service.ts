@@ -11,7 +11,7 @@ export class OrderService {
         private readonly orderRepo: OrderRepository,
         private readonly userService: UserService,
         private readonly productService: ProductService,
-        private readonly paymentService:PaymentService
+        private readonly paymentService: PaymentService
     ) { }
 
     async createOrder(dto: CreateOrderDto, userId: string): Promise<Order> {
@@ -41,16 +41,21 @@ export class OrderService {
             userId,
             grandTotal,
             subTotal,
-            payment: { ...dto.payment, status: "pending" },
+            payment: {
+                status: "pending",
+                method: "stripe",
+            },
+            currency:"usd",
+            fulfillmentStatus:"pending",
         });
 
         await this.reserveStock(dto.items);
 
         return order;
     }
-    async initiatePayment(order:CreateOrderDto){
-        const parsed=CreateOrderDtoSchema.parse(order)
-        const session=await this.paymentService.createStripeCheckoutSession(parsed as Order)
+    async initiatePayment(order: CreateOrderDto) {
+        const parsed = CreateOrderDtoSchema.parse(order)
+        const session = await this.paymentService.createStripeCheckoutSession(parsed as Order)
         return session
     }
     async getUserOrders(userId: string) {

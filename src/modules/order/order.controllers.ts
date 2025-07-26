@@ -7,10 +7,12 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   public createOrder = ApiHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const user = req.user;
+    
     const dto = CreateOrderDtoSchema.parse(req.body);
-    const order = await this.orderService.createOrder(dto, userId);
+    const order = await this.orderService.createOrder(dto, user?.id!);
     const { url } = await this.orderService.initiatePayment(req.body);
+
     res.json({
       success: true,
       status: 201,

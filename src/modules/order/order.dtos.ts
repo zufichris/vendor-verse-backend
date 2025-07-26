@@ -5,7 +5,6 @@ export const CreateOrderDtoSchema = z.object({
     items: z.array(OrderItemSchema).min(1),
     shippingAddress: AddressSchema,
     billingAddress: AddressSchema.optional(),
-    payment: PaymentSchema,
     tax: z.number().default(0),
     shipping: z.number().default(0),
     notes: z.string().optional(),
