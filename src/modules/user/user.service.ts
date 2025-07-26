@@ -92,9 +92,7 @@ export class UserService {
     async loginUser(loginData: LoginDTO): Promise<LoginResponse> {
         const { email, password, ip, userAgent } = loginData;
 
-        const user = await this.userRepository.findOne({
-            email: email.toLowerCase(),
-        });
+        const user = await this.userRepository.getUserWithPassword("email",email.toLowerCase());
 
         if (!user) {
             throw AppError.unauthorized("Invalid credentials");
