@@ -93,7 +93,7 @@ export class UserService {
         const { email, password, ip, userAgent } = loginData;
 
         const user = await this.userRepository.getUserWithPassword("email",email.toLowerCase());
-
+        console.log(user)
         if (!user) {
             throw AppError.unauthorized("Invalid credentials");
         }
@@ -658,6 +658,7 @@ export class UserService {
         return jwt.sign(
             {
                 userId: user.id,
+                id:user.id,
                 email: user.email,
                 role: user.role,
             },
