@@ -58,7 +58,7 @@ export const env: TENV = {
   google_client_secret: process.env.GOOGLE_CLIENT_SECRET!,
   jwt_secret: process.env.JWT_SECRET!,
   url,
-  client_url: "http://localhost:5173",
+  client_url:process.env.CLIENT_URL,
   stripe_apikey: process.env.STRIPE_APIKEY!,
 };
 
