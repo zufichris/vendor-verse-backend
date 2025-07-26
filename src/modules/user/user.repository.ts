@@ -9,4 +9,16 @@ export class UserRepository extends BaseRepository<User> {
     findByEmail(email: string): Promise<User | null> {
         return this.findOne({ email });
     }
+    async getUserWithPassword(by: "id" | "email", value: string) {
+        let result: User | null;
+
+        if (by === "email") {
+            result = await this.model.findOne({
+                email: value,
+            });
+        } else {
+            result = await this.model.findById(value);
+        }
+        return result;
+    }
 }
