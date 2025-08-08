@@ -18,7 +18,7 @@ export class OrderService {
         const user = await this.userService.getUserProfile(userId);
         if (!user) throw AppError.notFound("account not found");
         if (
-            user.status === UserStatus.BANNED ||
+            
             user.status === UserStatus.DELETED
         ) {
             throw AppError.forbidden("your cannot make purchases");
