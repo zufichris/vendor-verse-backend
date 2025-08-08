@@ -1,0 +1,9 @@
+node_modules
+tests
+.git
+.gitignore
+Dockerfile
+README.md
+*.log
+logs
+jest.*
