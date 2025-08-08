@@ -71,7 +71,7 @@ export class ProductController {
             },
         });
     });
- public getRecommendedProducts = ApiHandler(async (req, res) => {
+    public getRecommendedProducts = ApiHandler(async (req, res) => {
         const query = req.query;
         const result = await this.productService.getRecommendedProducts(
             query as Record<string, string>,
@@ -156,40 +156,7 @@ export class ProductController {
         res.json({
             success: true,
             message: "Product retrieved successfully",
-            data: {
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                slug: product.slug,
-                sku: product.sku,
-                price: product.price,
-                currency: product.currency,
-                discountPercentage: product.discountPercentage,
-                discountFixedAmount: product.discountFixedAmount,
-                discountStartDate: product.discountStartDate,
-                discountEndDate: product.discountEndDate,
-                categoryId: product.categoryId,
-                brand: product.brand,
-                tags: product.tags,
-                images: product.images,
-                thumbnail: product.thumbnail,
-                type: product.type,
-                status: product.status,
-                visibility: product.visibility,
-                condition: product.condition,
-                featured: product.featured,
-                stockQuantity: product.stockQuantity,
-                isInStock: product.isInStock,
-                variants: product.variants,
-                weight: product.weight,
-                weightUnit: product.weightUnit,
-                dimensions: product.dimensions,
-                seo: product.seo,
-                createdById: product.createdById,
-                updatedById: product.updatedById,
-                createdAt: product.createdAt,
-                updatedAt: product.updatedAt,
-            },
+            data: product,
         });
     });
 
@@ -472,6 +439,23 @@ export class ProductController {
                 createdAt: product.createdAt,
                 updatedAt: product.updatedAt,
             },
+        });
+    });
+    public deleteProduct = ApiHandler(async (req: Request, res: Response) => {
+        const userId = req.user?.id;
+        if (!userId) {
+            throw AppError.unauthorized("User not authenticated");
+        }
+
+        const { id } = req.params;
+        if (!id || typeof id !== "string") {
+            throw AppError.badRequest("Invalid product ID");
+        }
+        const result = await this.productService.deleteProduct(id);
+        res.json({
+            success: true,
+            message: "product deleted successfully",
+            data: result,
         });
     });
 
@@ -788,7 +772,6 @@ export class ProductController {
 
     public getAllCategories = ApiHandler(async (_req: Request, res: Response) => {
         const result = await this.productService.getAllCategories();
-
         res.json({
             success: true,
             message: "Categories retrieved successfully",
@@ -864,7 +847,6 @@ export class ProductController {
     });
 
     public getBanners = ApiHandler(async (req: Request, res: Response) => {
-
         const result = await this.productService.getBanners();
 
         res.json({
@@ -889,9 +871,4 @@ export class ProductController {
             data: null,
         });
     });
-
-
-
-
-
 }
