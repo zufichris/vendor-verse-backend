@@ -4,7 +4,6 @@ import { ApiHandler } from "../../util/api-handler";
 import { AppError } from "./error.middleware";
 import { env } from "../../config";
 import { User, UserRepository, UserRole } from "../../modules/user";
-import { logger } from "../../logger";
 
 export class AuthMiddleware {
     constructor(private readonly userRepository: UserRepository) { }
@@ -24,7 +23,7 @@ export class AuthMiddleware {
         return null;
     }
     public requireAuth = ApiHandler(
-        async (req: Request, res: Response, next: NextFunction) => {
+        async (req: Request, _res: Response, next: NextFunction) => {
             const token = AuthMiddleware.getToken(req);
             if (!token) {
                 throw AppError.unauthorized("Authentication token required.");
@@ -35,7 +34,9 @@ export class AuthMiddleware {
 
                 const decodedPayload = decoded as User & { userId: string };
 
-                const exists = await this.userRepository.findById(decodedPayload.userId);
+                const exists = await this.userRepository.findById(
+                    decodedPayload.userId,
+                );
 
                 if (!exists) {
                     throw AppError.unauthorized("account not found");
@@ -66,9 +67,8 @@ export class AuthMiddleware {
 
     public authorize(allowedRole: UserRole) {
         return ApiHandler(
-            async (req: Request, res: Response, next: NextFunction) => {
+            async (req: Request, _res: Response, next: NextFunction) => {
                 const user = req.user;
-
                 if (!user) {
                     throw AppError.unauthorized(
                         "User not authenticated for authorization check.",
@@ -79,7 +79,6 @@ export class AuthMiddleware {
                         `Access denied. Requires ${allowedRole} role.`,
                     );
                 }
-
                 next();
             },
         );
