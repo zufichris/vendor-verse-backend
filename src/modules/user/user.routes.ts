@@ -100,5 +100,9 @@ export function CreateUserRouter(
         authMiddleWare.authorize(UserRole.ADMIN),
         userController.updateUserMetrics,
     );
+
+    router.route("/").get(userController.getAllUsers);
+    router.route("/:id").get(userController.getUserById);
+
     return router;
 }

@@ -22,6 +22,7 @@ import {
     VerificationToken,
 } from "./user.types";
 import { AppError } from "../../core/middleware/error.middleware";
+import { PaginationResult } from "../../core/repository";
 
 export class UserService {
     private readonly JWT_SECRET = env.jwt_secret;
@@ -92,8 +93,11 @@ export class UserService {
     async loginUser(loginData: LoginDTO): Promise<LoginResponse> {
         const { email, password, ip, userAgent } = loginData;
 
-        const user = await this.userRepository.getUserWithPassword("email",email.toLowerCase());
-        console.log(user)
+        const user = await this.userRepository.getUserWithPassword(
+            "email",
+            email.toLowerCase(),
+        );
+        console.log(user);
         if (!user) {
             throw AppError.unauthorized("Invalid credentials");
         }
@@ -642,6 +646,34 @@ export class UserService {
         });
     }
 
+    public async getAllUsers(
+        query?: Record<string, unknown>,
+    ): Promise<PaginationResult<User>> {
+        const limit = !isNaN(Number(query?.limit?.toString()))
+            ? parseInt(query?.limit as string)
+            : 20;
+        const page = !isNaN(Number(query?.page?.toString()))
+            ? parseInt(query?.page as string)
+            : 1;
+
+        const result = await this.userRepository.paginate({
+            limit,
+            page,
+        });
+        if (!result.data) {
+            throw AppError.internal("Failed to fetch users");
+        }
+        return result;
+    }
+
+    public async getUserById(userId: string): Promise<User> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            throw AppError.notFound("User not found");
+        }
+        return user;
+    }
+
     private isAccountLocked(user: User): boolean {
         const hourAgo = new Date();
         hourAgo.setHours(hourAgo.getHours() - 1);
@@ -658,7 +690,7 @@ export class UserService {
         return jwt.sign(
             {
                 userId: user.id,
-                id:user.id,
+                id: user.id,
                 email: user.email,
                 role: user.role,
             },

@@ -10,14 +10,15 @@ import {
 } from "./user.dtos";
 import { UserStatus } from "./user.types";
 import { AppError } from "../../core/middleware/error.middleware";
+import { stat } from "fs";
 
 export class UserController {
     constructor(private readonly userService: UserService) { }
 
     public getMe = ApiHandler(async (req: Request, res: Response) => {
         const user = req.user;
-        if(!user){
-            throw AppError.forbidden("user not logged in ")
+        if (!user) {
+            throw AppError.forbidden("user not logged in ");
         }
         res.status(201).json({
             success: true,
@@ -32,7 +33,29 @@ export class UserController {
             },
         });
     });
-
+    getAllUsers = ApiHandler(async (req: Request, res: Response) => {
+        const result = await this.userService.getAllUsers(req.query);
+console.log("result", result);
+        res.status(200).json({
+            success: true,
+            message: "Users retrieved successfully",
+            data: result,
+            status: 200,
+        });
+    });
+    getUserById = ApiHandler(async (req: Request, res: Response) => {
+        const userId = req.params.id;
+        if (!userId) {
+            throw AppError.badRequest("User ID is required");
+        }
+        const user = await this.userService.getUserById(userId);
+        res.status(200).json({
+            success: true,
+            message: "User retrieved successfully",
+            data: user,
+            status: 200,
+        });
+    });
     public register = ApiHandler(async (req: Request, res: Response) => {
         const userData: CreateUserDTO = req.body;
         if (!userData.email || !userData.password || !userData.firstName) {
