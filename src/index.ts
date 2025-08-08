@@ -20,6 +20,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(localizationMiddleware);
+app.get("/favicon.ico ",function (req,res){
+    res.send("")
+})
 
 app.use("/api/v1", routesv1);
 
