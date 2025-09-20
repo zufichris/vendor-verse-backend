@@ -4,6 +4,8 @@ export * from "./order.models";
 export * from "./order.repository";
 export * from "./order.service";
 export * from "./order.controllers";
+export * from "./order.routes";
+export * from "./payment.service";
 
 import { UserService, UserRepository, UserModel } from "../user";
 import { AuthMiddleware } from "../../core/middleware/auth.middleware";

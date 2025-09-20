@@ -18,10 +18,9 @@ export class OrderService {
         const user = await this.userService.getUserProfile(userId);
         if (!user) throw AppError.notFound("account not found");
         if (
-            
-            user.status === UserStatus.DELETED
+            [UserStatus.DELETED, UserStatus.BANNED, UserStatus.INACTIVE].includes(user.status)
         ) {
-            throw AppError.forbidden("your cannot make purchases");
+            throw AppError.forbidden("account suspended or inactive, your cannot make purchases");
         }
         const subTotal = dto.items.reduce(
             (sum, i) => sum + i.price * i.quantity - i.discount,
@@ -33,7 +32,7 @@ export class OrderService {
             "ORD-" +
             Date.now() +
             "-" +
-            Math.random().toString(36).substr(2, 6).toUpperCase();
+            Math.random().toString().substr(2, 6).toUpperCase();
 
         const order = await this.orderRepo.create({
             ...dto,
@@ -45,11 +44,11 @@ export class OrderService {
                 status: "pending",
                 method: "stripe",
             },
-            currency:"usd",
-            fulfillmentStatus:"pending",
+            currency: "usd",
+            fulfillmentStatus: "pending",
         });
 
-        await this.reserveStock(dto.items);
+        await this.reserveStock(order.items);
 
         return order;
     }
@@ -151,5 +150,14 @@ export class OrderService {
             isDeleted: true,
             updatedAt: new Date().toISOString(),
         });
+    }
+    async paymentWebhook(signature: string, body: unknown) {
+        const result = await this.paymentService.stripeCheckoutWebwook(signature, body);
+        if (result.received && result.orderId) {
+            await this.markPaid(result.orderId, "stripe-webhook");
+        } else {
+            await this.markFailed(result.orderId!);
+        }
+        return result
     }
 }
