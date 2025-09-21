@@ -12,11 +12,11 @@ export class OrderController {
         const dto = CreateOrderDtoSchema.parse(req.body);
         const order = await this.orderService.createOrder(dto, user?.id!);
         const { url } = await this.orderService.initiatePayment({
-            items:order.items,
-            shipping:order.shipping,
-            shippingAddress:order.shippingAddress,
-            tax:order.tax,
-            notes:order.notes
+            items: order.items,
+            shipping: order.shipping,
+            shippingAddress: order.shippingAddress,
+            tax: order.tax,
+            notes: order.notes
         });
 
         res.json({
@@ -42,6 +42,7 @@ export class OrderController {
 
     public stripeWebhook = ApiHandler(async (req: Request, res: Response) => {
         const signature = req.headers["stripe-signature"] as string;
+        res.json({ received: true });
         const { received } = await this.orderService.paymentWebhook(signature, req.body);
         if (received) {
             res.status(200).json({ received });

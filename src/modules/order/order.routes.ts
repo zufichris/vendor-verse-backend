@@ -9,15 +9,13 @@ export function createOrderRouter(
 ) {
     const router = Router();
 
-    router.use(authMw.requireAuth);
-
     router
         .route("/")
         .post(ctrl.createOrder)
         .get(authMw.requireAuth, ctrl.getMyOrders);
 
     router.route("/webhooks/stripe").post(express.raw({ type: 'application/json' }), ctrl.stripeWebhook);
-    router.route("/:id").patch(ctrl.updateOrder);
+    router.route("/:id").patch(authMw.requireAuth, ctrl.updateOrder);
 
     return router;
 }
