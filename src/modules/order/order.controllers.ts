@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { OrderService } from "./order.service";
 import { CreateOrderDtoSchema, UpdateOrderDtoSchema } from "./order.dtos";
 import { ApiHandler } from "../../util/api-handler";
@@ -42,7 +42,6 @@ export class OrderController {
 
     public stripeWebhook = ApiHandler(async (req: Request, res: Response) => {
         const signature = req.headers["stripe-signature"] as string;
-        res.json({ received: true });
         const { received } = await this.orderService.paymentWebhook(signature, req.body);
         if (received) {
             res.status(200).json({ received });
