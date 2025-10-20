@@ -90,6 +90,45 @@ export class UserService {
         return updatedUser;
     }
 
+    async createAnonymousUser(dto: CreateUserDTO) {
+
+        const existingUser = await this.userRepository.findByEmail(
+            dto.email.toLowerCase(),
+        );
+
+        if (existingUser) {
+            return existingUser;
+        }
+
+        if (dto.phone) {
+            const existingPhone = await this.userRepository.findOne({
+                phone: dto.phone,
+            });
+            if (existingPhone) {
+                return existingPhone;
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(
+            dto.password,
+            this.BCRYPT_SALT_ROUNDS,
+        );
+
+        const user = await this.userRepository.create({
+            ...dto,
+            password: hashedPassword,
+            email: dto.email.toLowerCase(),
+            referralCode: this.generateReferralCode(
+                dto.firstName,
+                dto.lastName,
+            ),
+            preferences: this.getDefaultPreferences(),
+            status: UserStatus.PENDING_VERIFICATION,
+        });
+
+        return user;
+    }
+
     async loginUser(loginData: LoginDTO): Promise<LoginResponse> {
         const { email, password, ip, userAgent } = loginData;
 
@@ -97,7 +136,6 @@ export class UserService {
             "email",
             email.toLowerCase(),
         );
-        console.log(user);
         if (!user) {
             throw AppError.unauthorized("Invalid credentials");
         }

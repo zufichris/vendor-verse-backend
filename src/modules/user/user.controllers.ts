@@ -35,7 +35,6 @@ export class UserController {
     });
     getAllUsers = ApiHandler(async (req: Request, res: Response) => {
         const result = await this.userService.getAllUsers(req.query);
-console.log("result", result);
         res.status(200).json({
             success: true,
             message: "Users retrieved successfully",

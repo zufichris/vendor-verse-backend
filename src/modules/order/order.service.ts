@@ -5,6 +5,7 @@ import { UserService, UserStatus } from "../user";
 import { Order } from "./order.types";
 import { ProductService } from "../product";
 import { PaymentService } from "./payment.service";
+import { generateStrongPassword } from "../../util/randomString";
 
 export class OrderService {
     constructor(
@@ -14,14 +15,31 @@ export class OrderService {
         private readonly paymentService: PaymentService
     ) { }
 
-    async createOrder(dto: CreateOrderDto, userId: string): Promise<Order> {
-        const user = await this.userService.getUserProfile(userId);
-        if (!user) throw AppError.notFound("account not found");
+    async createOrder(dto: CreateOrderDto, userId?: string): Promise<Order> {
+        let user = userId ? await this.userService.getUserProfile(userId) : null;
+        // Create an anonymous user
+        if (!user) {
+            user = await this.userService.createAnonymousUser({
+                email: dto.billingAddress?.email ?? dto.shippingAddress.email,
+                firstName: dto.billingAddress?.firstName ?? dto.shippingAddress.firstName,
+                lastName: dto.billingAddress?.lastName ?? dto.shippingAddress.lastName,
+                password: generateStrongPassword(),
+                marketingConsent: false,
+                phone: dto.billingAddress?.phone ?? dto.shippingAddress.phone
+            })
+        };
+
+        // Check again if user exists
+        if (!user) {
+            throw AppError.notFound("account not found")
+        }
+
         if (
             [UserStatus.DELETED, UserStatus.BANNED, UserStatus.INACTIVE].includes(user.status)
         ) {
             throw AppError.forbidden("account suspended or inactive, your cannot make purchases");
         }
+
         const subTotal = dto.items.reduce(
             (sum, i) => sum + i.price * i.quantity - i.discount,
             0,
@@ -37,7 +55,7 @@ export class OrderService {
         const order = await this.orderRepo.create({
             ...dto,
             orderNumber,
-            userId,
+            userId: user.id,
             grandTotal,
             subTotal,
             payment: {
@@ -52,9 +70,14 @@ export class OrderService {
 
         return order;
     }
-    async initiatePayment(order: CreateOrderDto) {
-        const parsed = CreateOrderDtoSchema.parse(order)
-        const session = await this.paymentService.createStripeCheckoutSession(parsed as Order)
+    async initiatePayment(orderData: string | Order) {
+        const order = typeof orderData === 'string' ? await this.getOrderById(orderData) : orderData;
+
+        if (!order || !order.id) {
+            throw AppError.notFound("Order not found");
+        }
+
+        const session = await this.paymentService.createStripeCheckoutSession(order);
         return session
     }
     async getUserOrders(userId: string) {
@@ -154,9 +177,12 @@ export class OrderService {
     async paymentWebhook(signature: string, body: unknown) {
         const result = await this.paymentService.stripeCheckoutWebwook(signature, body);
         if (result.received && result.orderId) {
-            await this.markPaid(result.orderId, "stripe-webhook");
-        } else {
-            await this.markFailed(result.orderId!);
+            if (result.paymentStatus === 'success') {
+                await this.markPaid(result.orderId, "stripe-webhook");
+            } else {
+                await this.markFailed(result.orderId!);
+
+            }
         }
         return result
     }

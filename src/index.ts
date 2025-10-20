@@ -18,9 +18,19 @@ new DB(env.mongo_uri).connect();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Only use express.json() for non-Stripe routes
+app.use((req, res, next) => {
+    if (req.originalUrl === "/api/v1/orders/webhooks/stripe") {
+        next(); // Skip express.json() for this route
+    } else {
+        express.json()(req, res, next); // Apply normally
+    }
+});
+
+// app.use(express.json());
 app.use(localizationMiddleware);
-app.get("/favicon.ico ", function(_, res) {
+app.get("/favicon.ico ", function (_, res) {
     res.send("")
 })
 

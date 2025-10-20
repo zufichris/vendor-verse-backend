@@ -11,7 +11,7 @@ export function createOrderRouter(
 
     router
         .route("/")
-        .post(authMw.requireAuth, ctrl.createOrder)
+        .post(authMw.alloAnonmous, ctrl.createOrder)
         .get(authMw.requireAuth, ctrl.getMyOrders);
 
     router.route("/webhooks/stripe").post(express.raw({ type: 'application/json' }), ctrl.stripeWebhook);

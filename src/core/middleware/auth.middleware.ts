@@ -65,6 +65,22 @@ export class AuthMiddleware {
         },
     );
 
+    public alloAnonmous = ApiHandler(
+        async (req: Request, res: Response, next: NextFunction) => {
+            try {
+                const token = AuthMiddleware.getToken(req);
+                if (!token) {
+                    next();
+                } else {
+                    await this.requireAuth(req, res, next)
+                }
+
+            } catch (error) {
+                next();
+            }
+        }
+    )
+
     public authorize(allowedRole: UserRole) {
         return ApiHandler(
             async (req: Request, _res: Response, next: NextFunction) => {
