@@ -1,13 +1,15 @@
 import { FilterQuery, QueryOptions, ProjectionType } from "mongoose";
 import { BaseRepository } from "../../core/repository";
 import { UpdateProductDto } from "./product.dtos";
-import { Product } from "./product.types";
-import { ProductModel } from "./product.models";
+import { Product, ProductVariant } from "./product.types";
+import { ProductModel, ProductVariantModel } from "./product.models";
 
 export class ProductRepository extends BaseRepository<Product> {
   constructor(protected readonly model: typeof ProductModel) {
     super(model);
   }
+
+  private readonly variantsRepo: BaseRepository<ProductVariant> = new BaseRepository(ProductVariantModel)
 
   async findBySlug(
     slug: string,
@@ -82,6 +84,12 @@ export class ProductRepository extends BaseRepository<Product> {
       projection,
       options,
     );
+  }
+
+  getVariant(variantId: string, withVariant: boolean = false) {
+    return this.variantsRepo.findById(variantId, undefined, {
+      populate: withVariant ? ['variantId'] : []
+    })
   }
 
   async deleteVariant(

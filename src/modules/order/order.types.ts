@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { DateQueryDtoSchema, PaginationOptionsDtoSchema, SortOptionsDtoSchema } from "../../core/dtos";
+import { SupportedSizes } from "../product";
 
 export const AddressSchema = z.object({
     firstName: z.string().min(1),
@@ -12,15 +14,21 @@ export const AddressSchema = z.object({
     country: z.string().min(1),
 });
 
+export const OrderItemMetaData = z.object({
+    size: z.nativeEnum(SupportedSizes)
+}).catchall(z.string())
+
 export const OrderItemSchema = z.object({
     productId: z.string(),
-    variantId: z.string().optional(),
+    variantId: z.string(),
     name: z.string(),
     sku: z.string(),
     price: z.number().positive(),
     quantity: z.number().int().min(1),
     discount: z.number().min(0).default(0),
     total: z.number().positive(),
+    imageUrl: z.string().default(''),
+    metaData: OrderItemMetaData
 });
 
 export const PaymentStatusSchema = z.enum([
@@ -36,6 +44,7 @@ export const PaymentMethodSchema = z.enum([
     "apple-pay",
     "google-pay",
     "bank-transfer",
+    "cod"
 ]);
 
 export const PaymentSchema = z.object({
@@ -45,6 +54,7 @@ export const PaymentSchema = z.object({
     paidAt: z.string().datetime().optional(),
     refundedAt: z.string().datetime().optional(),
     refundAmount: z.number().min(0).optional(),
+    refundId: z.string().optional()
 });
 
 export const FulfillmentStatusSchema = z.enum([
@@ -56,10 +66,18 @@ export const FulfillmentStatusSchema = z.enum([
     "returned",
 ]);
 
+const OrderUserSchema = z.object({
+    firstName: z.string(),
+    lastName: z.string().optional(),
+    email: z.string(),
+    phone: z.string().optional().nullable(),
+    id: z.string()
+})
+
 export const OrderSchema = z.object({
     id: z.string(),
     orderNumber: z.string(),
-    userId: z.string(),
+    userId: z.union([z.string(), OrderUserSchema]),
     items: z.array(OrderItemSchema).min(1),
     subTotal: z.number().positive(),
     tax: z.number().min(0),
@@ -77,6 +95,7 @@ export const OrderSchema = z.object({
     isDeleted: z.boolean().optional(),
 });
 
+
 export type Address = z.infer<typeof AddressSchema>;
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type Payment = z.infer<typeof PaymentSchema>;
@@ -84,3 +103,5 @@ export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export type FulfillmentStatus = z.infer<typeof FulfillmentStatusSchema>;
 export type Order = z.infer<typeof OrderSchema>;
+export type OrderUser = z.infer<typeof OrderUserSchema>
+export type OrderItemMetaData = z.infer<typeof OrderItemMetaData>

@@ -1,0 +1,25 @@
+<div class="email-body">
+  <h2>Hello {{name}},</h2>
+  <p>
+    Use the following one-time passcode (OTP) to complete your sign-in
+    or verification process. This code will expire in
+    <strong>5 minutes</strong>.
+  </p>
+
+  <div class="otp-box">{{otp}}</div>
+
+  <p>You can also verify instantly by clicking the button below:</p>
+
+  <a href="{{verifyLink}}" class="verify-btn" target="_blank">
+    Verify Now
+  </a>
+
+  <p style="margin-top: 30px; font-size: 14px; color: #999;">
+    If you didn’t request this code, please ignore this email or contact our support team.
+  </p>
+
+  <p style="margin-top: 30px; font-size: 14px; color: #999;">
+    Stay secure,<br />
+    <strong>The LUXE Team</strong>
+  </p>
+</div>

@@ -22,7 +22,6 @@ import { createProductRouter } from "./product.routes";
 import { ProductService } from "./product.service";
 
 export function initProductModule() {
-    const categoryRepository = new BaseRepository(ProductCategoryModel);
     const controllers = new ProductController(
         new ProductService(
             new ProductRepository(ProductModel),

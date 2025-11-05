@@ -10,6 +10,7 @@ import {
     CreateProductCategoryDtoSchema,
     UpdateProductCategoryDto,
     UpdateProductCategoryDtoSchema,
+    CreateProductVariantDto,
 } from "./product.dtos";
 import {
     Banner,
@@ -19,13 +20,15 @@ import {
     ProductVariant,
 } from "./product.types";
 import { AppError } from "../../core/middleware/error.middleware";
+import moment from "moment";
+import { slugify } from "../../core/utils/slugify.util";
 
 export class ProductService {
     constructor(
         private readonly productRepository: ProductRepository,
         private readonly variantRepository: BaseRepository<ProductVariant>,
         private readonly categoryRepository: BaseRepository<ProductCategory>,
-        private readonly bannersRepository: BaseRepository<Banner>,
+        private readonly bannersRepository: BaseRepository<Banner>
     ) {
         this.getBanners = this.getBanners.bind(this);
     }
@@ -189,6 +192,7 @@ export class ProductService {
     }
 
     async getProductBySlug(slug: string): Promise<Product> {
+        console.log(slug)
         const p = await this.productRepository.findOne(
             { slug, isDeleted: { $ne: true } },
             undefined,
@@ -271,7 +275,7 @@ export class ProductService {
     }
 
     async filterProducts(
-        query: Record<string, string>,
+        query: Record<string, string | unknown>,
     ): Promise<PaginationResult<Product>> {
         const categorySlug = query.category;
         const minPrice = Number(query.min_price ?? 0);
@@ -297,6 +301,10 @@ export class ProductService {
             if (category) {
                 filter.categoryId = category.id;
             }
+        }
+
+        if (query.id) {
+            filter._id = Array.isArray(query.id) ? { $in: query.id } : query.id
         }
 
         const result = await this.productRepository.paginate({
@@ -331,6 +339,22 @@ export class ProductService {
         );
     }
 
+    async getAnalytics() {
+        const totalCount = await this.productRepository.count();
+        const activeCount = await this.productRepository.count({ status: 'active' });
+        const lowStockCount = await this.productRepository.count({
+            stockQuantity: {
+                $lt: 10
+            }
+        });
+
+        return {
+            active: activeCount,
+            total: totalCount,
+            lowStock: lowStockCount
+        }
+    }
+
     async getProductsByCategory(categoryId: string): Promise<Product[]> {
         return this.productRepository.find({
             categoryId,
@@ -338,7 +362,7 @@ export class ProductService {
         });
     }
 
-    async getActiveProducts(filter = {}): Promise<PaginationResult<Product>> {
+    getActiveProducts(filter = {}): Promise<PaginationResult<Product>> {
         const result = this.filterProducts(filter);
         return result;
     }
@@ -367,7 +391,7 @@ export class ProductService {
             return product.stockQuantity >= quantity;
         }
         const variant = await this.variantRepository.findById(variantId);
-        if (!variant || variant.productId !== productId)
+        if (!variant || variant.productId.toString() !== productId)
             throw AppError.notFound("Variant not found");
         return variant.stockQuantity >= quantity;
     }
@@ -388,24 +412,33 @@ export class ProductService {
         });
     }
 
-    async addVariant(productId: string, dto: Omit<ProductVariant, "id">) {
+    async addVariant(productId: string, dto: CreateProductVariantDto) {
         const product = await this.getProductById(productId);
-        if (product.type !== "configurable")
-            throw AppError.badRequest("Not configurable");
+        // if (product.type !== "configurable")
+        //     throw AppError.badRequest("Not configurable");
 
         const exists = await this.variantRepository.findOne({ sku: dto.sku });
         if (exists) throw AppError.conflict("SKU already exists");
 
+        const slug = this.generateSlug(`${product.name} ${dto.name}`)
+
         const variant = await this.variantRepository.create({
             ...dto,
             productId,
+            slug,
             isInStock: dto.stockQuantity > 0,
         });
 
-        await this.productRepository.updateById(productId, {
-            $addToSet: { variants: variant.id },
+        await this.productRepository.updateById(product.id, {
+            $addToSet: { variantIds: variant.id },
         });
-        return this.getProductById(productId);
+        return variant;
+    }
+
+    getVariant(variantId:string, withProduct: boolean = false){
+        return this.variantRepository.findById(variantId, undefined, {
+            populate: withProduct ? ['productId'] : []
+        })
     }
 
     async updateVariant(
@@ -558,6 +591,28 @@ export class ProductService {
         return result;
     }
 
+    async getBannersAnalytics() {
+        const now = moment()
+
+        const [total, totalFromLastMont] = await Promise.all([this.bannersRepository.count({}), this.bannersRepository.count({
+            createdAt: { $gte: now.subtract(1, 'month').toDate() }
+        })])
+
+        const clickRate = 3.2;
+        const clickRateFromLastWeek = 1.0;
+
+        const impressions = 3000
+
+        return {
+            total,
+            totalFromLastMont,
+            active: total,
+            clickRate,
+            clickRateFromLastWeek,
+            impressions
+        }
+    }
+
     private async startTransaction(): Promise<ClientSession> {
         const conn =
             (this.productRepository as any).model?.db ||
@@ -568,22 +623,18 @@ export class ProductService {
     }
 
     private generateSlug(name: string): string {
-        const slug = name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")
-            .replace(/&/g, "and")
-            .split(" ")
-            .join("-");
+
+        const slug = slugify(name);
         return slug;
     }
 
-    private generateSku(name: string, category: string, num: number): string {
+    private generateSku(name: string, category: string, num: number = 1): string {
+        const last = name.split(' ').map(i => i[0]).join('').toUpperCase()
         const clean = (s: string) =>
             s
                 .toUpperCase()
                 .replace(/[^A-Z0-9]/g, "")
                 .slice(0, 3);
-        return `SKU-${clean(category)}-${clean(name)}-${num}`;
+        return `SKU-${clean(category)}-${clean(name)}-${num}-${last}`;
     }
 }

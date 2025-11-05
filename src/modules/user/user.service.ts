@@ -8,6 +8,7 @@ import {
     LoginDTO,
     LoginResponse,
     PasswordResetDTO,
+    QueryUsersDtoSchema,
     UpdateUserDTO,
     UserAnalytics,
 } from "./user.dtos";
@@ -23,6 +24,11 @@ import {
 } from "./user.types";
 import { AppError } from "../../core/middleware/error.middleware";
 import { PaginationResult } from "../../core/repository";
+import { setupUsersQuery } from "./user.utils";
+import { generateNumericCode, generateRandomString } from "../../util/randomString";
+import { TemplatesEngine } from "../../core/shared/templates-engine";
+import moment from "moment";
+import { MailJetEmailService } from "../../core/shared/email-service/mail-jet";
 
 export class UserService {
     private readonly JWT_SECRET = env.jwt_secret;
@@ -68,14 +74,24 @@ export class UserService {
             ),
             preferences: this.getDefaultPreferences(),
             status: UserStatus.PENDING_VERIFICATION,
+            verificationTokens: []
         });
 
         const verificationToken = this.generateVerificationToken();
-        user.verificationTokens.push({
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        const otpCode = this.generateOtpCode()
+
+        const tokenExpiry = moment().add(5, 'minutes').toDate();
+
+        // Creates 2 tokens (one for otp verification and the other for direct link verification)
+        user.verificationTokens = [...(user.verificationTokens || []), {
+            expiresAt: tokenExpiry,
             token: verificationToken,
             type: "email",
-        });
+        }, {
+            expiresAt: tokenExpiry,
+            token: otpCode,
+            type: 'email'
+        }];
 
         const updatedUser = await this.userRepository.updateById(
             user.id,
@@ -85,6 +101,30 @@ export class UserService {
 
         if (!updatedUser) {
             throw AppError.internal("Failed to create user");
+        }
+
+        const html = this.compileVerificationHtml({
+            expiry: 5,
+            name: user.firstName,
+            otpCode,
+            userId: user.id,
+            verificationToken,
+            year: tokenExpiry.getFullYear(),
+            callbackUrl: userData.callbackUrl
+        })
+
+        try {
+            // No need to wait for completion as we do not depend on it and there's option to always resend the otp
+            MailJetEmailService.sendEmail({
+                to: {
+                    name: `${user.firstName} ${user.lastName}`,
+                    email: user.email
+                },
+                subject: "OTP Verification",
+                html
+            })
+        } catch (error) {
+            // ignore
         }
 
         return updatedUser;
@@ -164,10 +204,46 @@ export class UserService {
             throw AppError.unauthorized("Invalid credentials");
         }
 
+
         if (
-            !user.isEmailVerified &&
-            user.status !== UserStatus.PENDING_VERIFICATION
+            !user.isEmailVerified ||
+            user.status === UserStatus.PENDING_VERIFICATION
         ) {
+            // We need to generate new otp or resend existing valid otp
+            const now = new Date()
+            const token = this.generateVerificationToken()
+            const otpCode = this.generateOtpCode()
+            const expiryMinutes = 5;
+            const tokenExpiry = moment().add(expiryMinutes, 'minutes').toDate()
+
+            const tokens = ([...(user?.verificationTokens || []), { expiresAt: tokenExpiry, token: otpCode, type: 'email' }, { expiresAt: tokenExpiry, token, type: 'email' }] as VerificationToken[]).filter((otp) => new Date(otp.expiresAt) > now && !otp.usedAt)
+
+            this.userRepository.updateById(user.id, { verificationTokens: tokens })
+
+            const html = this.compileVerificationHtml({
+                expiry: expiryMinutes,
+                name: user.firstName,
+                otpCode,
+                userId: user.id,
+                verificationToken: token,
+                year: tokenExpiry.getFullYear(),
+                callbackUrl: loginData.callbackUrl
+            })
+
+            try {
+                // No need to wait for completion as we do not depend on it and there's option to always resend the otp
+                MailJetEmailService.sendEmail({
+                    to: {
+                        name: `${user.firstName} ${user.lastName}`,
+                        email: user.email
+                    },
+                    subject: "OTP Verification",
+                    html
+                })
+            } catch (error) {
+                // ignore
+            }
+
             throw AppError.forbidden("Please verify your email address");
         }
 
@@ -179,6 +255,7 @@ export class UserService {
         const updatedUser = await this.userRepository.updateById(user.id, {
             lastLogin: new Date(),
             lastActiveAt: new Date(),
+            verificationTokens: user.verificationTokens.filter(token => new Date(token.expiresAt) > new Date() && !token.usedAt)
         });
 
         if (!updatedUser) {
@@ -222,6 +299,7 @@ export class UserService {
 
         await this.userRepository.updateById(userId, {
             lastActiveAt: new Date(),
+            verificationTokens: [] // reset all verification tokens (if any)
         });
     }
 
@@ -253,7 +331,7 @@ export class UserService {
         }
     }
 
-    async requestPasswordReset(email: string): Promise<void> {
+    async requestPasswordReset(email: string, callbackUrl?: string): Promise<void> {
         const user = await this.userRepository.findOne({
             email: email.toLowerCase(),
         });
@@ -262,12 +340,21 @@ export class UserService {
             return;
         }
 
+        const expiryMinutes = 5;
+        const tokenExpiry = moment().add(expiryMinutes, 'minutes').toDate();
         const token = this.generateVerificationToken();
-        user.verificationTokens.push({
+        const otp = this.generateOtpCode();
+        const now = new Date()
+
+        user.verificationTokens = ([...(user.verificationTokens || []), {
             token,
             type: "password_reset",
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        });
+            expiresAt: tokenExpiry,
+        }, {
+            token: otp,
+            type: "password_reset",
+            expiresAt: tokenExpiry,
+        }] as VerificationToken[]).filter((itm) => new Date(itm.expiresAt) > now && !itm.usedAt);
 
         const updatedUser = await this.userRepository.updateById(user.id, {
             verificationTokens: user.verificationTokens,
@@ -276,12 +363,34 @@ export class UserService {
         if (!updatedUser) {
             throw AppError.internal("Failed to create password reset token");
         }
+
+        const html = this.compileVerificationHtml({
+            expiry: expiryMinutes,
+            name: updatedUser.firstName,
+            otpCode: otp,
+            userId: updatedUser.id,
+            verificationToken: token,
+            year: now.getFullYear(),
+            callbackUrl: callbackUrl,
+            path: 'reset-password'
+        })
+
+        await MailJetEmailService.sendEmail({
+            to: {
+                email: updatedUser.email,
+                name: `${updatedUser.firstName} ${updatedUser.lastName}`
+            },
+            subject: "OTP Verification",
+            html
+        })
     }
 
     async resetPassword(resetData: PasswordResetDTO): Promise<void> {
-        const user = await this.userRepository.findOne({
-            email: resetData.email.toLowerCase(),
-        });
+        if (!resetData.email && !resetData.userId) {
+            throw AppError.badRequest("Invalid data")
+        }
+
+        const user = resetData?.email ? await this.userRepository.findByEmail(resetData.email) : await this.userRepository.findById(resetData.userId!);
 
         if (!user) {
             throw AppError.badRequest("Invalid reset token");
@@ -299,7 +408,9 @@ export class UserService {
 
         const updatedUser = await this.userRepository.updateById(user.id, {
             password: hashedPassword,
-            verificationTokens: user.verificationTokens,
+            verificationTokens: user.verificationTokens.filter(itm => (new Date(itm.expiresAt) >= new Date() && !itm.usedAt) || itm.type === 'password_reset'),
+            isEmailVerified: true,
+            emailVerifiedAt: user?.emailVerifiedAt || new Date()
         });
 
         if (!updatedUser) {
@@ -307,8 +418,8 @@ export class UserService {
         }
     }
 
-    async verifyEmail(userId: string, token: string): Promise<void> {
-        const user = await this.userRepository.findById(userId);
+    async verifyEmail(userId: string, token: string) {
+        const user = await this.userRepository.findByEmail(userId) || await this.userRepository.findById(userId); // Try's to get user by email and if not found, it then tries to get by id. This method accepts but user email and user id for email verification.
         if (!user) {
             throw AppError.notFound("User not found");
         }
@@ -319,20 +430,32 @@ export class UserService {
 
         this.markTokenAsUsed(user, token);
 
-        const updatedUser = await this.userRepository.updateById(userId, {
+        const accessToken = this.generateAccessToken(user);
+        const refreshToken = this.generateRefreshToken(user);
+
+        const updatedUser = await this.userRepository.updateById(user.id, {
             isEmailVerified: true,
             emailVerifiedAt: new Date(),
             status: UserStatus.ACTIVE,
-            verificationTokens: user.verificationTokens,
+            verificationTokens: user.verificationTokens.filter(token => (new Date(token.expiresAt) >= new Date() && !token.usedAt) || token.type !== 'email'), // remove all email verification tokens
+            lastActiveAt: new Date(),
+            lastLogin: new Date()
         });
 
         if (!updatedUser) {
             throw AppError.internal("Failed to verify email");
         }
+
+        return {
+            user: updatedUser,
+            accessToken,
+            refreshToken,
+            expiresIn: this.getTokenExpiration(this.JWT_EXPIRES_IN),
+        }
     }
 
-    async resendEmailVerification(userId: string): Promise<void> {
-        const user = await this.userRepository.findById(userId);
+    async resendEmailVerification(userId: string, tokenType: VerificationToken['type'] = 'email', callbackUrl?: string): Promise<void> {
+        const user = await this.userRepository.findByEmail(userId) || await this.userRepository.findById(userId); // Try's to get user by email and if not found, it then tries to get by id. This method accepts but user email and user id for email verification.
         if (!user) {
             throw AppError.notFound("User not found");
         }
@@ -342,19 +465,50 @@ export class UserService {
         }
 
         const token = this.generateVerificationToken();
-        user.verificationTokens.push({
+        const otp = this.generateOtpCode();
+        const expiryMinutes = 5;
+        const tokenExpiry = moment().add(expiryMinutes, 'minutes').toDate()
+        const now = new Date()
+
+        // Remove any email verification tokens present Or expired
+        const newTokens = (user.verificationTokens || []).filter(token => new Date(token.expiresAt) > now && !token.usedAt).filter(token => token.type !== tokenType)
+
+        newTokens.push({
             token,
-            type: "email",
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            type: tokenType,
+            expiresAt: tokenExpiry,
+        }, {
+            expiresAt: tokenExpiry,
+            token: otp,
+            type: tokenType
         });
 
         const updatedUser = await this.userRepository.updateById(userId, {
-            verificationTokens: user.verificationTokens,
+            verificationTokens: newTokens,
         });
 
         if (!updatedUser) {
             throw AppError.internal("Failed to create verification token");
         }
+
+        // Send email to user
+        const html = this.compileVerificationHtml({
+            expiry: expiryMinutes,
+            name: updatedUser.firstName,
+            otpCode: otp,
+            userId: updatedUser.id,
+            verificationToken: token,
+            year: now.getFullYear(),
+            callbackUrl
+        })
+
+        await MailJetEmailService.sendEmail({
+            to: {
+                email: updatedUser.email,
+                name: `${updatedUser.firstName} ${updatedUser.lastName}`
+            },
+            html
+        })
     }
 
     async updateProfile(
@@ -630,6 +784,21 @@ export class UserService {
         }
     }
 
+    private compileVerificationHtml(dto: {
+        name: string; expiry: number; otpCode: string; year: number; userId: string; callbackUrl?: string; verificationToken: string;
+        path?: string
+    }) {
+        const html = TemplatesEngine.compile('users/verification-otp.hbs', {
+            name: dto.name,
+            expireMins: 5,
+            otp: dto.otpCode,
+            year: dto.year,
+            verifyLink: `${env.client_url}/auth/${dto?.path ? `${dto.path}/` : ''}${dto.userId}/${dto.verificationToken}${dto?.callbackUrl ? `?callbackUrl=${dto?.callbackUrl}` : ''}`
+        })
+
+        return html
+    }
+
     private generateReferralCode(firstName: string, lastName: string): string {
         const name = (firstName + lastName).replace(/[^a-zA-Z]/g, "").toUpperCase();
         const random = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -641,12 +810,17 @@ export class UserService {
         return token;
     }
 
+    private generateOtpCode(): string {
+        const token = generateNumericCode()
+        return token;
+    }
+
     private isTokenValid(
         user: User,
         token: string,
         type: VerificationToken["type"],
     ): boolean {
-        const tokenDoc = user.verificationTokens.find(
+        const tokenDoc = (user.verificationTokens || []).find(
             (t: VerificationToken) =>
                 t.token === token && t.type === type && !t.usedAt,
         );
@@ -687,17 +861,21 @@ export class UserService {
     public async getAllUsers(
         query?: Record<string, unknown>,
     ): Promise<PaginationResult<User>> {
-        const limit = !isNaN(Number(query?.limit?.toString()))
-            ? parseInt(query?.limit as string)
-            : 20;
-        const page = !isNaN(Number(query?.page?.toString()))
-            ? parseInt(query?.page as string)
-            : 1;
+        const { success, data, error } = QueryUsersDtoSchema.safeParse(query);
+
+        if (!success) {
+            throw AppError.unprocessableEntity("Invalid query data", error.format())
+        }
+
+        const { filter, options, page, limit } = setupUsersQuery(data)
 
         const result = await this.userRepository.paginate({
+            filter,
+            options,
             limit,
             page,
         });
+
         if (!result.data) {
             throw AppError.internal("Failed to fetch users");
         }

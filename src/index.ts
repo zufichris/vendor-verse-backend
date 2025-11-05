@@ -12,9 +12,20 @@ import { logger } from "./logger";
 import { routesv1 } from "./routes/v1";
 import dotenv from "dotenv";
 import { DB } from "./database";
+import { TemplatesEngine } from "./core/shared/templates-engine";
+import { SendgridEmailService } from "./core/shared/email-service/sengrid";
+import { MailJetEmailService } from "./core/shared/email-service/mail-jet";
+import mongoose from "mongoose";
+import { ProductCategoryModel, ProductModel, ProductVariantModel } from "./modules/product";
+import { CartModel } from "./modules/cart/cart.model";
 
 dotenv.config();
 new DB(env.mongo_uri).connect();
+
+// Initialise hbs partials
+TemplatesEngine.init()
+SendgridEmailService.init();
+MailJetEmailService.init()
 
 const app = express();
 app.use(cors());
@@ -46,6 +57,8 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 handleUnhandledRejection();
 handleUncaughtException();
+
+
 
 app.listen(env.port, () => {
     logger.info(`app running on http://localhost:${env.port}`);

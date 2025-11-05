@@ -10,7 +10,7 @@ import {
 } from "./user.dtos";
 import { UserStatus } from "./user.types";
 import { AppError } from "../../core/middleware/error.middleware";
-import { stat } from "fs";
+import { env } from "../../config";
 
 export class UserController {
     constructor(private readonly userService: UserService) { }
@@ -94,7 +94,7 @@ export class UserController {
 
         res.cookie("refreshToken", loginResponse.refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: env.in_prod,
             sameSite: "strict",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
@@ -200,7 +200,7 @@ export class UserController {
     public resetPassword = ApiHandler(async (req: Request, res: Response) => {
         const resetData: PasswordResetDTO = req.body;
 
-        if (!resetData.email || !resetData.token || !resetData.newPassword) {
+        if ((!resetData.email  && !resetData.userId) || !resetData.token || !resetData.newPassword) {
             throw AppError.badRequest("Email, token, and new password are required");
         }
 
@@ -219,23 +219,45 @@ export class UserController {
     });
 
     public verifyEmail = ApiHandler(async (req: Request, res: Response) => {
-        const { userId, token } = req.params;
+        const userId = req.params?.userId || req.body?.userId?.toString() || req?.body?.email?.toString();
+        const token = req.params?.token || req.body?.token?.toString();
 
         if (!userId || !token) {
             throw AppError.badRequest("User ID and token are required");
         }
 
-        await this.userService.verifyEmail(userId, token);
+        const verifiedUser = await this.userService.verifyEmail(userId, token);
+
+        res.cookie("refreshToken", verifiedUser.refreshToken, {
+            httpOnly: true,
+            secure: env.in_prod,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
 
         res.json({
             success: true,
             message: "Email verified successfully",
+            data: {
+                user: {
+                    id: verifiedUser.user.id,
+                    email: verifiedUser.user.email,
+                    firstName: verifiedUser.user.firstName,
+                    lastName: verifiedUser.user.lastName,
+                    role: verifiedUser.user.role,
+                    status: verifiedUser.user.status,
+                    isEmailVerified: verifiedUser.user.isEmailVerified,
+                    lastLogin: verifiedUser.user.lastLogin,
+                },
+                accessToken: verifiedUser.accessToken,
+                expiresIn: verifiedUser.expiresIn,
+            }
         });
     });
 
     public resendEmailVerification = ApiHandler(
         async (req: Request, res: Response) => {
-            const userId = req.user?.id;
+            const userId = req.user?.id || req?.body?.userId?.toString() || req?.body?.email?.toString();
 
             if (!userId) {
                 throw AppError.unauthorized("User not authenticated");
@@ -246,6 +268,7 @@ export class UserController {
             res.json({
                 success: true,
                 message: "Verification email sent successfully",
+                data: true
             });
         },
     );

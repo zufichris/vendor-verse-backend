@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_+={[}]|\\:;"\'<,>.?/';
 
 export function generateRandomString(length: number): string {
@@ -32,4 +34,19 @@ export function generateStrongPassword(length: number = 12): string {
 
     // Shuffle the password to remove predictable pattern
     return password.sort(() => Math.random() - 0.5).join('');
+}
+
+export function generateNumericCode(length = 6) {
+    if (!Number.isInteger(length) || length < 6) {
+        throw new Error("length must be an integer >= 6");
+    }
+
+    // maxExclusive = 10^length
+    const maxExclusive = 10 ** length;
+
+    // crypto.randomInt is secure and returns integer in [0, maxExclusive)
+    const n = crypto.randomInt(0, maxExclusive);
+
+    // pad with leading zeros if needed
+    return String(n).padStart(length, "0");
 }

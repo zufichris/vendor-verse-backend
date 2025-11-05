@@ -43,6 +43,22 @@ const ENVSchema = z.object({
     client_url: z.string().url().optional().describe("client url"),
     stripe_apikey: z.string().describe("stripe api key"),
     stripe_webhook_secret: z.string().describe("stripe webhook secret"),
+    imgbb: z.object({
+        apiKey: z.string().describe("imgbb api key"),
+        baseUrl: z.string().url().default("https://api.imgbb.com/1/upload").describe("imgbb base url"),
+    }),
+    cwd: z.string(),
+    email: z.object({
+        sendgridApiKey: z.string().describe("Sendgrid api key is required"),
+        mailJet: z.object({
+            apiKey: z.string(),
+            apiSecret: z.string()
+        }),
+        defaultSender: z.object({
+            email: z.string().email(),
+            name: z.string().default('No Reply')
+        })
+    })
 });
 
 export type TENV = z.infer<typeof ENVSchema>;
@@ -62,6 +78,22 @@ export const env: TENV = {
     client_url: process.env.CLIENT_URL,
     stripe_apikey: process.env.STRIPE_APIKEY!,
     stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET!,
+    imgbb: {
+        apiKey: process.env.IMGBB_API_KEY!,
+        baseUrl: process.env.IMGBB_BASE_URL! || 'https://api.imgbb.com',
+    },
+    cwd: process.cwd(),
+    email: {
+        sendgridApiKey: process.env.SENDGRID_API_KEY!,
+        mailJet: {
+            apiKey: process.env.MAILJET_API_KEY!,
+            apiSecret: process.env.MAILJET_API_SECRET!
+        },
+        defaultSender: {
+            email: process.env.EMAIL_DEFAULT_SENDER!,
+            name: process.env.EMAIL_DEFAULT_SENDER_NAME || 'No Repky'
+        }
+    }
 };
 
 ENVSchema.parse(env);

@@ -1,6 +1,7 @@
 import { BaseRepository } from "../../core/repository";
 import { User } from "./user.types";
 import { UserModel } from "./user.models";
+import { Schema } from "mongoose";
 
 export class UserRepository extends BaseRepository<User> {
   constructor(protected readonly model: typeof UserModel) {
@@ -27,5 +28,18 @@ export class UserRepository extends BaseRepository<User> {
     }
 
     return result.toObject();
+  }
+
+  async removeExpiredTokens(userId: string) {
+    await this.model.updateOne(
+      { _id: new Schema.Types.ObjectId(userId) },
+      {
+        $pull: {
+          verificationTokens: {
+            $or: [{ expiresAt: { $lte: new Date() } }, { usedAt: { $exists: true } }],
+          },
+        },
+      }
+    );
   }
 }

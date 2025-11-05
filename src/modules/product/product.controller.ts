@@ -5,8 +5,9 @@ import {
     UpdateProductDtoSchema,
     CreateProductCategoryDtoSchema,
     UpdateProductCategoryDtoSchema,
+    CreateProductVariantSchema,
 } from "./product.dtos";
-import { Banner, ProductVariantSchema } from "./product.types";
+import { ProductVariantSchema } from "./product.types";
 import { ApiHandler } from "../../util/api-handler";
 import { AppError } from "../../core/middleware/error.middleware";
 
@@ -21,6 +22,7 @@ export class ProductController {
 
         const parsedDto = CreateProductDtoSchema.safeParse(req.body);
         if (!parsedDto.success) {
+            console.log(JSON.stringify(parsedDto.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid product data",
                 parsedDto.error.flatten(),
@@ -144,6 +146,17 @@ export class ProductController {
             },
         });
     });
+
+    public getAnalytics = ApiHandler(async (req, res) => {
+        const result = await this.productService.getAnalytics();
+
+        res.json({
+            status: 200,
+            success: true,
+            message: "Analytics fetched successfully",
+            data: result
+        })
+    })
 
     public getProductBySlug = ApiHandler(async (req: Request, res: Response) => {
         const { slug } = req.params;
@@ -466,61 +479,31 @@ export class ProductController {
         }
 
         const { productId } = req.params;
+
         if (!productId || typeof productId !== "string") {
             throw AppError.badRequest("Invalid product ID");
         }
 
-        const parsedVariant = ProductVariantSchema.omit({ id: true }).safeParse(
+        const parsedVariant = CreateProductVariantSchema.safeParse(
             req.body,
         );
+
         if (!parsedVariant.success) {
+            console.log(JSON.stringify(parsedVariant.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid variant data",
                 parsedVariant.error.flatten(),
             );
         }
 
-        const product = await this.productService.addVariant(
+        const variant = await this.productService.addVariant(
             productId,
             parsedVariant.data,
         );
         res.json({
             success: true,
             message: "Variant added successfully",
-            data: {
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                slug: product.slug,
-                sku: product.sku,
-                price: product.price,
-                currency: product.currency,
-                discountPercentage: product.discountPercentage,
-                discountFixedAmount: product.discountFixedAmount,
-                discountStartDate: product.discountStartDate,
-                discountEndDate: product.discountEndDate,
-                categoryId: product.categoryId,
-                brand: product.brand,
-                tags: product.tags,
-                images: product.images,
-                thumbnail: product.thumbnail,
-                type: product.type,
-                status: product.status,
-                visibility: product.visibility,
-                condition: product.condition,
-                featured: product.featured,
-                stockQuantity: product.stockQuantity,
-                isInStock: product.isInStock,
-                variants: product.variants,
-                weight: product.weight,
-                weightUnit: product.weightUnit,
-                dimensions: product.dimensions,
-                seo: product.seo,
-                createdById: product.createdById,
-                updatedById: product.updatedById,
-                createdAt: product.createdAt,
-                updatedAt: product.updatedAt,
-            },
+            data: variant,
         });
     });
 
@@ -652,8 +635,11 @@ export class ProductController {
             throw AppError.unauthorized("User not authenticated");
         }
 
+        console.log(req.body)
+
         const parsedDto = CreateProductCategoryDtoSchema.safeParse(req.body);
         if (!parsedDto.success) {
+            console.log(JSON.stringify(parsedDto.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid category data",
                 parsedDto.error.flatten(),
@@ -870,5 +856,22 @@ export class ProductController {
             message: "Banner deleted successfully",
             data: null,
         });
+    });
+
+    getBannersAnalytics = ApiHandler(async (req, res) => {
+        const user = req.user
+
+        if (!user) {
+            throw AppError.unauthorized("Unauthrized to access this resource")
+        }
+
+        const result = await this.productService.getBannersAnalytics()
+
+        res.json({
+            success: true,
+            status: 200,
+            message: "Request processed successfully",
+            data: result
+        })
     });
 }

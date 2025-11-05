@@ -1,0 +1,35 @@
+<div style="padding: 25px;">
+  <h2 style="color: #333;">Thank you for your order, {{shippingAddress.firstName}}!</h2>
+  <p style="color: #555;">Your order <strong>#{{orderNumber}}</strong> has been successfully placed.</p>
+
+  <h3 style="color: #333;">Order Summary</h3>
+  <table width="100%" cellspacing="0" cellpadding="8" style="border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f2f2f2;">
+        <th align="left">Item</th>
+        <th align="center">Qty</th>
+        <th align="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{this.name}}</td>
+        <td align="center">{{this.quantity}}</td>
+        <td align="right">{{this.total}} {{../currency}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <p style="margin-top: 20px;">
+    Subtotal: {{subTotal}} {{currency}}<br />
+    Shipping: {{shipping}} {{currency}}<br />
+    Tax: {{tax}} {{currency}}<br />
+    <strong>Grand Total: {{grandTotal}} {{currency}}</strong>
+  </p>
+
+  <p style="margin-top: 20px;">
+    We’ll notify you once your order ships. Thanks for choosing LUXE!
+  </p>
+</div>

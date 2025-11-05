@@ -11,6 +11,17 @@ import {
     SeoSchema,
 } from "./product.types";
 
+export enum SupportedSizes {
+    XXS = "XXS",
+    XS = "XS",
+    S = "S",
+    M = "M",
+    L = "L",
+    XL = "XL",
+    XXL = "XXL",
+    XXXL = "XXXL"
+}
+
 export const CreateProductDtoSchema = z
     .object({
         name: z.string().min(1).describe("product name"),
@@ -30,7 +41,7 @@ export const CreateProductDtoSchema = z
         categoryId: z.string(),
         brand: z.string().min(1).optional(),
         tags: z.array(z.string()).optional(),
-        images: z.array(ImageSchema).min(1),
+        images: z.array(ImageSchema).default([]),
         thumbnail: ImageSchema,
         type: ProductTypeSchema,
         status: ProductStatusSchema,
@@ -97,7 +108,7 @@ export const UpdateProductDtoSchema = z
         categoryId: z.string().optional(),
         brand: z.string().min(1).optional(),
         tags: z.array(z.string()).optional(),
-        images: z.array(ImageSchema).min(1).optional(),
+        images: z.array(ImageSchema).optional(),
         thumbnail: ImageSchema.optional(),
         type: ProductTypeSchema.optional(),
         status: ProductStatusSchema.optional(),
@@ -177,12 +188,40 @@ export const UpdateProductCategoryDtoSchema = z.object({
     updatedAt: z.string().datetime().optional(),
 });
 
+export const CreateProductVariantSchema = z.object({
+    productId: z.string(),
+    sku: z.string().min(1).max(50),
+    name: z.string().optional(),
+    colorCode: z.string(), // hex color code
+    price: z.coerce.number().positive(),
+    currency: z.string().length(3),
+    discountPrice: z.coerce.number().min(0).optional(),
+    discountPercentage: z.coerce.number().min(0).max(100).optional(),
+    discountFixedAmount: z.coerce.number().min(0).optional(),
+    attributes: z.record(z.string(), z.string()).optional(),
+    stockQuantity: z.coerce.number().int().min(0).default(100000000),
+    isInStock: z.boolean().default(true),
+    images: z.array(ImageSchema),
+    thumbnail: ImageSchema,
+    sizes: z.array(z.nativeEnum(SupportedSizes)).min(1),
+    weight: z.coerce.number().min(0).optional(),
+    weightUnit: z.string().optional(),
+    dimensions: DimensionsSchema.optional(),
+    isDeleted: z.boolean().default(false),
+    deletedAt: z.date().optional(),
+    deletedById: z.string().optional(),
+    createdAt: z.string().datetime().default(new Date().toISOString()),
+    updatedAt: z.string().datetime().optional(),
+});
+
 export type CreateProductDto = z.infer<typeof CreateProductDtoSchema>;
 export type UpdateProductDto = z.infer<typeof UpdateProductDtoSchema>;
 export type ProductResponseDto = z.infer<typeof ProductResponseDtoSchema>;
 export type CreateProductCategoryDto = z.infer<
     typeof CreateProductCategoryDtoSchema
 >;
+
+export type CreateProductVariantDto = z.infer<typeof CreateProductVariantSchema>;
 export type UpdateProductCategoryDto = z.infer<
     typeof UpdateProductCategoryDtoSchema
 >;

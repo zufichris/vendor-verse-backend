@@ -1,5 +1,18 @@
 import { Address } from "cluster";
-import { Gender, Preferences, User } from "./user.types";
+import { Gender, Preferences, User, UserStatus } from "./user.types";
+import z from "zod";
+import { PaginationOptionsDtoSchema, SortOptionsDtoSchema } from "../../core/dtos";
+
+export const QueryUsersDtoSchema = z.object({
+    id: z.string().optional(),
+    search: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    role: z.string().optional(),
+    status: z.enum([UserStatus.ACTIVE, ...Object.values(UserStatus)]).optional()
+}).merge(PaginationOptionsDtoSchema).merge(SortOptionsDtoSchema([]))
+
+export type QueryUersDTO = z.infer<typeof QueryUsersDtoSchema>
 
 export interface CreateUserDTO {
     firstName: string;
@@ -11,6 +24,7 @@ export interface CreateUserDTO {
     gender?: Gender;
     referredBy?: string;
     marketingConsent?: boolean;
+    callbackUrl?: string
 }
 
 export interface UpdateUserDTO {
@@ -29,6 +43,7 @@ export interface LoginDTO {
     rememberMe?: boolean;
     ip: string;
     userAgent: string;
+    callbackUrl?: string
 }
 
 export interface LoginResponse {
@@ -39,7 +54,8 @@ export interface LoginResponse {
 }
 
 export interface PasswordResetDTO {
-    email: string;
+    email?: string;
+    userId?: string;
     newPassword: string;
     token: string;
 }
