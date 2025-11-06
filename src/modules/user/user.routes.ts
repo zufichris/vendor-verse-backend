@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { UserController } from "./user.controllers";
 import { AuthMiddleware } from "../../core/middleware/auth.middleware";
 import { UserRole } from "./user.types";
+import { initCartModule } from "../cart";
 
 export function CreateUserRouter(
     userController: UserController,
@@ -21,6 +22,7 @@ export function CreateUserRouter(
 
     router.post("/password-reset/confirm", userController.resetPassword);
 
+    router.post("/verify-email", userController.verifyEmail); // if u want to pass params via request body
     router.post("/verify-email/:userId/:token", userController.verifyEmail);
 
     router
@@ -45,7 +47,7 @@ export function CreateUserRouter(
 
     router.post("/change-password", userController.changePassword);
 
-    router.post("/resend-verification", userController.resendEmailVerification);
+    router.post("/resend-verification", authMiddleWare.alloAnonmous, userController.resendEmailVerification);
 
     router.delete(
         "/account",
@@ -100,6 +102,8 @@ export function CreateUserRouter(
         authMiddleWare.authorize(UserRole.ADMIN),
         userController.updateUserMetrics,
     );
+
+    router.use('/cart', initCartModule())
 
     router.route("/").get(userController.getAllUsers);
     router.route("/:id").get(userController.getUserById);

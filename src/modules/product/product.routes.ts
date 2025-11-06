@@ -67,6 +67,8 @@ function createCustomerProductRoutes(
         productController.getSubcategories,
     );
 
+    router.get('/banners/analytics', productController.getBannersAnalytics)
+
     return router;
 }
 
@@ -76,16 +78,18 @@ function createAdminProductRoutes(
 ): Router {
     const router = Router();
     router.use(authMiddleware.requireAuth);
-    router.use(authMiddleware.authorize(UserRole.ADMIN));
+    router.use(authMiddleware.authorize([UserRole.ADMIN, UserRole.MODERATOR, UserRole.SUPPORT, UserRole.VENDOR]));
 
     // Product management
     router.post("/", productController.createProduct);
     router.patch("/:id", productController.updateProduct);
     router.put("/products/:id", productController.updateProduct);
     router.delete("/:id", productController.deleteProduct);
+    // Analytics
+    router.get('/analytics', productController.getAnalytics)
 
     // Product variant management
-    router.post("/products/:productId/variants", productController.addVariant);
+    router.post("/:productId/variants", productController.addVariant);
     router.put(
         "/products/:productId/variants/:variantId",
         productController.updateVariant,
@@ -97,9 +101,9 @@ function createAdminProductRoutes(
 
     // Category management
     router.post("/categories", productController.createCategory);
+    router.get('/categories', productController.getAllCategories)
     router
         .route("/categories/:id")
-        .get(productController.getAllCategories)
         .patch(productController.updateCategory)
         .delete(productController.deleteCategory);
 

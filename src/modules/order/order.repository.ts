@@ -14,6 +14,7 @@ export class OrderRepository extends BaseRepository<Order> {
     }
 
     async findByOrderNumber(orderNumber: string):Promise<Order|null> {
+        const found = await this.findOne({})
         return this.findOne({ orderNumber, isDeleted: { $ne: true } });
     }
 }

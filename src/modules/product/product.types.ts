@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export enum SupportedSizes {
+    XXS = "XXS",
+    XS = "XS",
+    S = "S",
+    M = "M",
+    L = "L",
+    XL = "XL",
+    XXL = "XXL",
+    XXXL = "XXXL"
+}
+
 export const ProductStatusSchema = z.enum([
     "active",
     "inactive",
@@ -25,15 +36,15 @@ export const ImageSchema = z.object({
 });
 
 export const DimensionsSchema = z.object({
-    length: z.number().positive(),
-    width: z.number().positive(),
-    height: z.number().positive(),
+    length: z.coerce.number().min(0).default(0),
+    width: z.coerce.number().min(0).default(0),
+    height: z.coerce.number().min(0).default(0),
     unit: z.string().optional(),
 });
 
 export const SeoSchema = z.object({
-    title: z.string().max(70).optional(),
-    description: z.string().max(160).optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
     metaKeywords: z.array(z.string()).optional(),
     canonicalUrl: z.string().url().optional(),
 });
@@ -57,25 +68,28 @@ export const ProductCategorySchema = z.object({
 export const ProductVariantSchema = z.object({
     id: z.string(),
     productId: z.string(),
+    slug: z.string(),
     sku: z.string().min(1).max(50),
-    name: z.string().optional(),
-    price: z.number().positive(),
+    name: z.string(),
+    colorCode: z.string(), // valid hex color code
+    price: z.coerce.number().positive(),
     currency: z.string().length(3),
-    discountPrice: z.number().positive().optional(),
-    discountPercentage: z.number().min(0).max(100).optional(),
-    discountFixedAmount: z.number().positive().optional(),
+    discountPrice: z.coerce.number().min(0).default(0),
+    discountPercentage: z.coerce.number().min(0).max(100).optional(),
+    discountFixedAmount: z.coerce.number().positive().optional(),
     attributes: z.record(z.string(), z.string()).optional(),
-    stockQuantity: z.number().int().min(0),
-    isInStock: z.boolean(),
-    images: z.array(ImageSchema).optional(),
-    thumbnail: ImageSchema.optional(),
-    weight: z.number().positive().optional(),
+    stockQuantity: z.coerce.number().int().min(0),
+    isInStock: z.boolean().default(true),
+    images: z.array(ImageSchema),
+    thumbnail: ImageSchema,
+    sizes: z.array(z.nativeEnum(SupportedSizes)).min(1),
+    weight: z.coerce.number().min(0).optional(),
     weightUnit: z.string().optional(),
     dimensions: DimensionsSchema.optional(),
     isDeleted: z.boolean().default(false),
     deletedAt: z.date().optional(),
     deletedById: z.string().optional(),
-    createdAt: z.string().datetime(),
+    createdAt: z.string().datetime().default(new Date().toISOString()),
     updatedAt: z.string().datetime().optional(),
 });
 
@@ -100,7 +114,7 @@ export const ProductSchema = z
         category: ProductCategorySchema,
         brand: z.string().min(1).optional(),
         tags: z.array(z.string()).optional(),
-        images: z.array(ImageSchema).min(1),
+        images: z.array(ImageSchema).default([]),
         thumbnail: ImageSchema,
         type: ProductTypeSchema,
         status: ProductStatusSchema,
@@ -156,7 +170,7 @@ export const ProductSchema = z
 
 export const BannerSchema = z.object({
     id: z.string(),
-    slug:z.string().describe("banner unique slug"),
+    slug: z.string().describe("banner unique slug"),
     title: z.string().describe("Banner Tittle"),
     subtitle: z.string().describe("banner subtitle"),
     description: z.string().describe("banner description"),

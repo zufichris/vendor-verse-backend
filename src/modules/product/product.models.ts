@@ -49,9 +49,9 @@ const BannerSchema = new Schema<BannerDocument>(
         slug: { type: String, required: true, unique: true, lowercase: true },
         description: String,
         cta: { type: String },
-        image: {type:String},
+        image: { type: String },
         color: { type: String },
-        link:{type:String}
+        link: { type: String }
     },
     {
         timestamps: true,
@@ -72,17 +72,19 @@ export const ProductCategoryModel =
     models.ProductCategory ||
     model<ProductCategoryDocument>("ProductCategory", ProductCategorySchema);
 
-export type ProductVariantDocument = ProductVariant & Document;
+export type ProductVariantDocument = Omit<ProductVariant, 'productId'> & { productId: Schema.Types.ObjectId } & Document;
 const ProductVariantSchema = new Schema<ProductVariantDocument>(
     {
         productId: {
-            type: String,
+            type: Schema.Types.ObjectId,
             ref: "Product",
             required: true,
             index: true,
         },
         sku: { type: String, required: true, unique: true },
+        slug: { type: String, required: true, unique: true },
         name: String,
+        colorCode: { type: String, required: true }, // valid hex color code
         price: { type: Number, required: true, min: 0 },
         currency: { type: String, required: true },
         stockQuantity: { type: Number, required: true, min: 0 },
@@ -91,6 +93,7 @@ const ProductVariantSchema = new Schema<ProductVariantDocument>(
         images: [ImageSchema],
         thumbnail: ImageSchema,
         weight: Number,
+        sizes: { type: [String], required: true, default: [] },
         dimensions: {
             length: Number,
             width: Number,
@@ -113,6 +116,7 @@ const ProductVariantSchema = new Schema<ProductVariantDocument>(
         },
     },
 );
+
 export const ProductVariantModel =
     models.ProductVariant ||
     model<ProductVariantDocument>("ProductVariant", ProductVariantSchema);

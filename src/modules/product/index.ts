@@ -3,7 +3,6 @@ export * from "./product.service";
 export * from "./product.routes";
 export * from "./product.types";
 export * from "./product.models";
-export * from "./product.dtos";
 export * from "./product.repository";
 
 import { AuthMiddleware } from "../../core/middleware/auth.middleware";
@@ -22,7 +21,6 @@ import { createProductRouter } from "./product.routes";
 import { ProductService } from "./product.service";
 
 export function initProductModule() {
-    const categoryRepository = new BaseRepository(ProductCategoryModel);
     const controllers = new ProductController(
         new ProductService(
             new ProductRepository(ProductModel),

@@ -229,7 +229,7 @@ const userSchema = new Schema<UserDocument>(
       transform: function (_, ret: any) {
         delete ret.password;
         delete ret.twoFactorSecret;
-        delete ret.verificationTokens;
+        // delete ret.verificationTokens;
         ret.id = ret._id.toString();
         return ret;
       },

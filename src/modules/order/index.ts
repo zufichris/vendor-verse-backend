@@ -27,6 +27,9 @@ import { BaseRepository } from "../../core/repository";
 import { PaymentService } from "./payment.service";
 import { Stripe } from "stripe";
 import { env } from "../../config";
+import { NewsletterService } from "../newsletter/newsletter.service";
+import { NewsletterRepository } from "../newsletter/newsletter.repository";
+import { NewsletterModel } from "../newsletter/newsletter.model";
 
 export function initOrderModule() {
   const ctrl = new OrderController(
@@ -46,6 +49,7 @@ export function initOrderModule() {
           timeout: 30000,
         }),
       ),
+      new NewsletterService(new NewsletterRepository(NewsletterModel))
     ),
   );
   const authMw = new AuthMiddleware(new UserRepository(UserModel));

@@ -1,0 +1,98 @@
+<div style="padding: 25px; font-family: Arial, Helvetica, sans-serif; color: #333;">
+  <h2 style="color: #111; margin: 0 0 8px;">Order Cancelled</h2>
+  <p style="color: #555; margin-top: 6px;">
+    Hi {{shippingAddress.firstName}},
+  </p>
+
+  <p style="color: #555; line-height: 1.6;">
+    We’re sorry to let you know that your order <strong>#{{orderNumber}}</strong> has been
+    <strong style="color: #c53030;">cancelled</strong>.
+  </p>
+
+  {{#if cancelledAt}}
+    <p style="font-size: 13px; color: #777;">
+      Cancelled on: {{cancelledAt}}
+    </p>
+  {{/if}}
+
+  {{#if cancelReason}}
+    <p style="background:#fff7f7; border:1px solid #fde3e3; color:#9b2c2c; padding:12px; border-radius:8px; margin-top:12px;">
+      <strong>Reason:</strong> {{cancelReason}}
+    </p>
+  {{/if}}
+
+  <h3 style="color:#333; margin-top: 20px;">Order summary</h3>
+
+  <table width="100%" cellspacing="0" cellpadding="8" style="border-collapse: collapse; margin-top:8px;">
+    <thead>
+      <tr style="background: #f5f5f7;">
+        <th align="left" style="font-weight:600; font-size:14px;">Item</th>
+        <th align="center" style="font-weight:600; font-size:14px;">Qty</th>
+        <th align="right" style="font-weight:600; font-size:14px;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+        <tr>
+          <td style="border-bottom: 1px solid #f0f0f0; padding-top:10px;">{{this.name}}</td>
+          <td align="center" style="border-bottom: 1px solid #f0f0f0; padding-top:10px;">{{this.quantity}}</td>
+          <td align="right" style="border-bottom: 1px solid #f0f0f0; padding-top:10px;">{{this.total}} {{../currency}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <p style="margin-top: 16px; font-size: 14px; color: #555;">
+    Subtotal: {{subTotal}} {{currency}}<br/>
+    Shipping: {{shipping}} {{currency}}<br/>
+    Tax: {{tax}} {{currency}}<br/>
+    <strong>Grand Total: {{grandTotal}} {{currency}}</strong>
+  </p>
+
+  {{#if refundAmount}}
+    <div style="margin-top:18px; padding:14px; background:#f7fff7; border:1px solid #dbf5db; border-radius:8px;">
+      <p style="margin:0; color:#166534;">
+        <strong>Refund status:</strong>
+        {{#if refundStatus}}
+          {{refundStatus}}
+        {{else}}
+          Pending
+        {{/if}}
+      </p>
+      <p style="margin:6px 0 0; color:#166534;">
+        Amount to be refunded: <strong>{{refundAmount}} {{currency}}</strong>
+      </p>
+
+      {{#if refundReceiptUrl}}
+        <p style="margin-top:8px;">
+          <a href="{{refundReceiptUrl}}" target="_blank"
+             style="display:inline-block; padding:8px 14px; background:#0f172a; color:#fff; text-decoration:none; border-radius:6px; font-weight:600;">
+            View Refund Details
+          </a>
+        </p>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  <div style="margin-top:22px;">
+    <p style="color:#555; line-height:1.6;">
+      If you'd like to place the order again, you can reorder with the button below. If you have questions about this cancellation or a refund, please contact our support team.
+    </p>
+
+    <div style="margin-top:14px;">
+      {{#if reorderUrl}}
+        <a href="{{reorderUrl}}" target="_blank" style="display:inline-block; padding:12px 20px; background:#111827; color:#fff; text-decoration:none; border-radius:8px; font-weight:600; margin-right:10px;">
+          Reorder
+        </a>
+      {{/if}}
+
+      <a href="mailto:{{supportEmail}}" style="display:inline-block; padding:12px 20px; background:transparent; color:#111827; text-decoration:underline; border-radius:8px; font-weight:600;">
+        Contact Support
+      </a>
+    </div>
+  </div>
+
+  <p style="margin-top:18px; color:#999; font-size:13px;">
+    If you didn’t request this cancellation, please get in touch immediately.
+  </p>
+</div>

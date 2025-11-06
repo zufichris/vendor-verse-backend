@@ -65,7 +65,24 @@ export class AuthMiddleware {
         },
     );
 
-    public authorize(allowedRole: UserRole) {
+    public alloAnonmous = ApiHandler(
+        async (req: Request, res: Response, next: NextFunction) => {
+            try {
+                const token = AuthMiddleware.getToken(req);
+                if (!token) {
+                    next();
+                } else {
+                    await this.requireAuth(req, res, next)
+                }
+
+            } catch (error) {
+                next();
+            }
+        }
+    )
+
+    public authorize(allowedRole: UserRole | UserRole[]) {
+        const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole]
         return ApiHandler(
             async (req: Request, _res: Response, next: NextFunction) => {
                 const user = req.user;
@@ -74,9 +91,10 @@ export class AuthMiddleware {
                         "User not authenticated for authorization check.",
                     );
                 }
-                if (user.role !== allowedRole) {
+                
+                if (!allowedRoles.includes(user.role)) {
                     throw AppError.forbidden(
-                        `Access denied. Requires ${allowedRole} role.`,
+                        `Access denied. Requires ${allowedRoles.join(',')} role(s).`,
                     );
                 }
                 next();

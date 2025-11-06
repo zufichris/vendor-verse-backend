@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, Document, models } from "mongoose";
-import { Address, OrderItem, Payment, FulfillmentStatus } from "./order.types";
+import { Address, OrderItem, Payment, FulfillmentStatus, OrderItemMetaData } from "./order.types";
 
 const AddressSchema = new Schema<Address>(
     {
@@ -16,16 +16,27 @@ const AddressSchema = new Schema<Address>(
     { _id: false, versionKey: false },
 );
 
-const OrderItemSchema = new Schema<OrderItem>(
+const OrderItemMetaDataSchema = new Schema<OrderItemMetaData>(
+    {
+        size: { type: String, required: true }
+    },
+    { _id: false, versionKey: false },
+);
+
+const OrderItemSchema = new Schema<Omit<OrderItem, 'variantId'> & {variantId: Schema.Types.ObjectId}>(
     {
         productId: { type: String, ref: "Product", required: true },
-        variantId: { type: Schema.Types.ObjectId, ref: "ProductVariant" },
+        variantId: { type: Schema.Types.ObjectId, ref: "ProductVariant", required: true },
         name: { type: String, required: true },
         sku: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true },
         discount: { type: Number, default: 0 },
         total: { type: Number, required: true },
+        imageUrl: { type: String },
+        metaData: {
+            type: OrderItemMetaDataSchema
+        }
     },
     { _id: false, versionKey: false },
 );
@@ -46,6 +57,7 @@ const PaymentSchema = new Schema<Payment>(
         paidAt: Date,
         refundedAt: Date,
         refundAmount: Number,
+        refundId: String
     },
     { _id: false, versionKey: false },
 );
@@ -113,6 +125,8 @@ const OrderSchema = new Schema<OrderDocument>(
 );
 
 OrderSchema.index({ userId: 1, orderNumber: 1 });
+
+OrderSchema.index({ orderNumber: 1 })
 
 export const OrderModel =
     models.Order || model<OrderDocument>("Order", OrderSchema);
