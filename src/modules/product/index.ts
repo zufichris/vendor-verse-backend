@@ -3,7 +3,6 @@ export * from "./product.service";
 export * from "./product.routes";
 export * from "./product.types";
 export * from "./product.models";
-export * from "./product.dtos";
 export * from "./product.repository";
 
 import { AuthMiddleware } from "../../core/middleware/auth.middleware";
