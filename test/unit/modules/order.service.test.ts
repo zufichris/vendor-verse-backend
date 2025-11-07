@@ -1,3 +1,4 @@
+import { NewsletterService } from '../../../src/modules/newsletter/newsletter.service'
 import { CreateOrderDto, OrderRepository, OrderService, PaymentService } from '../../../src/modules/order/'
 import { ProductService } from '../../../src/modules/product'
 import { UserStatus, User, UserService } from '../../../src/modules/user'
@@ -9,7 +10,7 @@ describe('OrderService', () => {
     let orderSevice: OrderService
 
     beforeEach(() => {
-        orderSevice = new OrderService({} as OrderRepository, {} as UserService, {} as ProductService, {} as PaymentService)
+        orderSevice = new OrderService({} as OrderRepository, {} as UserService, {} as ProductService, {} as PaymentService, {} as NewsletterService)
     })
 
     afterEach(() => {
@@ -31,7 +32,10 @@ describe('OrderService', () => {
                 postalCode: '0000',
                 state: 'test state',
                 street: '123 test st'
-            }
+            },
+            currency: 'aed',
+            newsletter: false,
+            paymentMethod: 'cod'
         }
         beforeEach(() => {
             jest.clearAllMocks()
