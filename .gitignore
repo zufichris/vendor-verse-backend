@@ -27,7 +27,7 @@ logs/
 Thumbs.db
 
 # NPM package lock
-package-lock.json
+# package-lock.json
 yarn.lock
 
 # Coverage directory used by tools like istanbul
