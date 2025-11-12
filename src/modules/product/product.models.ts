@@ -51,7 +51,8 @@ const BannerSchema = new Schema<BannerDocument>(
         cta: { type: String },
         image: { type: String },
         color: { type: String },
-        link: { type: String }
+        link: { type: String },
+        video: { type: String }
     },
     {
         timestamps: true,

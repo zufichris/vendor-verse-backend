@@ -22,7 +22,6 @@ export class ProductController {
 
         const parsedDto = CreateProductDtoSchema.safeParse(req.body);
         if (!parsedDto.success) {
-            console.log(JSON.stringify(parsedDto.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid product data",
                 parsedDto.error.flatten(),
@@ -489,7 +488,6 @@ export class ProductController {
         );
 
         if (!parsedVariant.success) {
-            console.log(JSON.stringify(parsedVariant.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid variant data",
                 parsedVariant.error.flatten(),
@@ -635,11 +633,8 @@ export class ProductController {
             throw AppError.unauthorized("User not authenticated");
         }
 
-        console.log(req.body)
-
         const parsedDto = CreateProductCategoryDtoSchema.safeParse(req.body);
         if (!parsedDto.success) {
-            console.log(JSON.stringify(parsedDto.error.format(), null, 2))
             throw AppError.badRequest(
                 "Invalid category data",
                 parsedDto.error.flatten(),

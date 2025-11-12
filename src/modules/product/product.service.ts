@@ -192,7 +192,6 @@ export class ProductService {
     }
 
     async getProductBySlug(slug: string): Promise<Product> {
-        console.log(slug)
         const p = await this.productRepository.findOne(
             { slug, isDeleted: { $ne: true } },
             undefined,
@@ -295,8 +294,10 @@ export class ProductService {
             ];
         }
         if (categorySlug && typeof categorySlug === "string") {
+            const q = { $regex: categorySlug, $options: "i" }
             const category = await this.categoryRepository.findOne({
-                slug: { $regex: categorySlug, $options: "i" },
+                $or: [{ name: q }, { slug: q }]
+
             });
             if (category) {
                 filter.categoryId = category.id;
@@ -435,7 +436,7 @@ export class ProductService {
         return variant;
     }
 
-    getVariant(variantId:string, withProduct: boolean = false){
+    getVariant(variantId: string, withProduct: boolean = false) {
         return this.variantRepository.findById(variantId, undefined, {
             populate: withProduct ? ['productId'] : []
         })
