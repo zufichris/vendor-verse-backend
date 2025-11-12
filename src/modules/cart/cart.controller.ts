@@ -24,7 +24,6 @@ export class CartControler {
         })
 
         if (!success) {
-            console.log(JSON.stringify(error.format(), undefined, 2))
             throw AppError.internal("Unexpected server error", error.format())
         }
 

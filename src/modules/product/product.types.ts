@@ -175,6 +175,7 @@ export const BannerSchema = z.object({
     subtitle: z.string().describe("banner subtitle"),
     description: z.string().describe("banner description"),
     image: z.string().describe("banner image"),
+    video: z.string().optional(),
     cta: z.string().describe("banner cta"),
     link: z.string().describe("banner redirection link"),
     color: z.string().optional().describe("white").describe("banner main color"),

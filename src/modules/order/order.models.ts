@@ -23,7 +23,7 @@ const OrderItemMetaDataSchema = new Schema<OrderItemMetaData>(
     { _id: false, versionKey: false },
 );
 
-const OrderItemSchema = new Schema<Omit<OrderItem, 'variantId'> & {variantId: Schema.Types.ObjectId}>(
+const OrderItemSchema = new Schema<Omit<OrderItem, 'variantId'> & { variantId: Schema.Types.ObjectId }>(
     {
         productId: { type: String, ref: "Product", required: true },
         variantId: { type: Schema.Types.ObjectId, ref: "ProductVariant", required: true },
