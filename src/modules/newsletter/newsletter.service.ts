@@ -1,11 +1,32 @@
+import { MailJetEmailService } from "../../core/shared/email-service/mail-jet";
+import { TemplatesEngine } from "../../core/shared/templates-engine";
 import { CreateNewsLetterDto, QueryNewsLetterDto } from "./newsletter.dtos";
 import { NewsletterRepository } from "./newsletter.repository";
 
 export class NewsletterService {
     constructor(private readonly repo: NewsletterRepository) { }
 
-    subscribe(dto: CreateNewsLetterDto) {
-        return this.repo.upsert(dto);
+    async subscribe(dto: CreateNewsLetterDto) {
+        const found = await this.repo.findByEmail(dto.email.toLowerCase())
+
+        if (found) {
+            return found
+        }
+
+        const created = await this.repo.upsert(dto)
+
+        const html = TemplatesEngine.compile('join-movement.hbs', {})
+
+        MailJetEmailService.sendEmail({
+            to:{
+                name: `${dto.firstName} ${dto.lastName}`,
+                email: dto.email 
+            },
+            subject: 'Welcome to the Movement',
+            html
+        })
+        
+        return created;
     }
 
     unsubscribe(email: string) {
