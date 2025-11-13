@@ -36,6 +36,8 @@ export function createOrderRouter(
 
     router.use('/admin', createAdminOrderRouter(ctrl, authMw))
 
+    router.get('/tracking/:id', ctrl.getOrderTrackingInfo)
+
     router.route("/:id").patch(authMw.requireAuth, ctrl.updateMyOrder).get(authMw.requireAuth, ctrl.getMyOrder);
 
 
