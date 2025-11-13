@@ -71,6 +71,32 @@ export class OrdersAdminController {
         res.json(response)
     })
 
+    getOrderTrackingInfo = ApiHandler(async (req, res) => {
+        const orderId = req.params.id
+        if (!orderId) {
+            throw AppError.badRequest('Invalid resource identifier')
+        }
+
+        const order = await this.orderService.getOrderById(orderId)
+
+        const { data: response, success, error } = createResponseSchema(OrderResponseDto).safeParse({ data: JSON.parse(JSON.stringify(order)) })
+
+        if (!success) {
+            throw AppError.internal("An Unexpected server error occured", error.format())
+        }
+
+        res.json({
+            ...response,
+            data: {
+                id: response.data?.id,
+                orderNumber: response.data?.orderNumber,
+                shipping: response.data?.shipping,
+                shippingAddress: response.data?.shippingAddress,
+                itemsCount: response.data?.items.length
+            }
+        })
+    })
+
     initOrderForUser = ApiHandler(async (req, res) => {
         const userId: string | null | undefined = req.body?.userId;
 
