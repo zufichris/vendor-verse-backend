@@ -18,6 +18,7 @@ import { MailJetEmailService } from "./core/shared/email-service/mail-jet";
 import mongoose from "mongoose";
 import { ProductCategoryModel, ProductModel, ProductVariantModel } from "./modules/product";
 import { CartModel } from "./modules/cart/cart.model";
+import { OrderModel } from "./modules/order";
 
 dotenv.config();
 new DB(env.mongo_uri).connect();
@@ -57,6 +58,10 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 handleUnhandledRejection();
 handleUncaughtException();
+
+(async()=>{
+    await OrderModel.deleteMany()
+})()
 
 
 
