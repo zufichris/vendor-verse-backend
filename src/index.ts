@@ -59,10 +59,6 @@ app.use(errorMiddleware);
 handleUnhandledRejection();
 handleUncaughtException();
 
-(async()=>{
-    await OrderModel.deleteMany()
-})()
-
 
 
 app.listen(env.port, () => {
