@@ -88,6 +88,7 @@ export const OrderSchema = z.object({
     shippingAddress: AddressSchema,
     billingAddress: AddressSchema.optional(),
     payment: PaymentSchema,
+    discountCode: z.string().optional().nullable(),
     fulfillmentStatus: FulfillmentStatusSchema,
     notes: z.string().optional(),
     createdAt: z.string().datetime(),

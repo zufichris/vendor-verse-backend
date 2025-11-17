@@ -7,6 +7,7 @@ import { initBlogModule } from "../modules/blogs";
 import fileUpload from "express-fileupload";
 import { initFilesManagerModule } from "../modules/files-manager";
 import { initContactUsModule } from "../modules/contact";
+import { initCouponModule } from "../modules/coupon";
 
 const router = express.Router();
 
@@ -25,6 +26,8 @@ router.use("/newsletters", initNewsletterModule());
 router.use("/blogs", initBlogModule());
 router.use("/files-manager", initFilesManagerModule())
 
-router.use('/contact-us', initContactUsModule())
+router.use('/contact-us', initContactUsModule());
+
+router.use('/coupons', initCouponModule());
 
 export const routesv1 = router;

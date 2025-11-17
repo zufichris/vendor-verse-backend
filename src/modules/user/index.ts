@@ -1,5 +1,6 @@
 import { AuthMiddleware } from "../../core/middleware/auth.middleware";
 import { logger } from "../../logger";
+import { CouponModel, CouponRepository, CouponService } from "../coupon";
 import { UserController } from "./user.controllers";
 import { UserModel } from "./user.models";
 import { UserRepository } from "./user.repository";
@@ -17,7 +18,7 @@ export * from "./user.controllers";
 export function intitUserModule() {
     const userRepository = new UserRepository(UserModel);
     const userService = new UserService(userRepository);
-    const userControllers = new UserController(userService);
+    const userControllers = new UserController(userService, new CouponService(new CouponRepository(CouponModel)));
     const authMiddleware = new AuthMiddleware(userRepository);
     const userRoutes = CreateUserRouter(userControllers, authMiddleware);
     logger.info("user module initialized");

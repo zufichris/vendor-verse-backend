@@ -19,6 +19,8 @@ import mongoose from "mongoose";
 import { ProductCategoryModel, ProductModel, ProductVariantModel } from "./modules/product";
 import { CartModel } from "./modules/cart/cart.model";
 import { OrderModel } from "./modules/order";
+import { CouponModel } from "./modules/coupon";
+import { nanoid } from "nanoid";
 
 dotenv.config();
 new DB(env.mongo_uri).connect();

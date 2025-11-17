@@ -47,6 +47,7 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "mongoose": "^8.7.1",
+    "nanoid": "^5.1.6",
     "node-mailjet": "^6.0.11",
     "sanitize-html": "^2.17.0",
     "stripe": "^18.3.0",

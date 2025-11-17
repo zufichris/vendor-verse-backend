@@ -8,6 +8,7 @@ export const CreateOrderDtoSchema = z.object({
     billingAddress: AddressSchema.optional(),
     tax: z.number().default(0),
     shipping: z.number().default(0),
+    couponCode: z.string().optional().nullable(),
     notes: z.string().optional(),
     newsletter: z.boolean().optional().default(false),
     currency: z.string(),

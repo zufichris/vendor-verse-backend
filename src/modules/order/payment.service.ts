@@ -7,6 +7,18 @@ export class PaymentService {
     constructor(private readonly stripe: Stripe.Stripe) { }
     async createStripeCheckoutSession(order: Order) {
         try {
+            let couponId: string | null = null
+
+            if (order.discount && order.discountCode) {
+                const coupon = await this.stripe.coupons.create({
+                    amount_off: order.discount * 100,
+                    currency: order.currency.toLowerCase(),
+                    duration: 'once'
+                })
+
+                couponId = coupon.id
+            }
+
             const line_items: Stripe.Stripe.Checkout.SessionCreateParams.LineItem[] =
                 order.items.map((item) => ({
                     price_data: {
@@ -31,6 +43,11 @@ export class PaymentService {
                         }
                     }
                 ],
+                discounts: couponId ? [
+                    {
+                        coupon: couponId
+                    }
+                ] : undefined,
                 mode: "payment",
                 metadata: { orderId: order.id.toString() },
                 payment_intent_data: {

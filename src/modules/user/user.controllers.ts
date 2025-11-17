@@ -11,9 +11,11 @@ import {
 import { UserStatus } from "./user.types";
 import { AppError } from "../../core/middleware/error.middleware";
 import { env } from "../../config";
+import { Coupon, CouponService } from "../coupon";
+import { nanoid } from "nanoid";
 
 export class UserController {
-    constructor(private readonly userService: UserService) { }
+    constructor(private readonly userService: UserService, private readonly couponsSvc: CouponService) { }
 
     public getMe = ApiHandler(async (req: Request, res: Response) => {
         const user = req.user;
@@ -62,6 +64,29 @@ export class UserController {
         }
 
         const user = await this.userService.createUser(userData);
+
+        // Create a welcome coupon for user if none already exists
+        let existingCoup: {
+            valid: boolean;
+            discountRate: number;
+            code: string;
+        } | null = null
+        try {
+            existingCoup = await this.couponsSvc.getWelcomeCoupon(user.email)
+        } catch (error) {
+
+        }
+
+        if (!existingCoup) {
+            const code = `WELCOME-${nanoid(6)}`.toUpperCase()
+
+            await this.couponsSvc.createCouponCode({
+                discountPercent: 15,
+                maxUses: 1,
+                code,
+                userEmail: user.email
+            })
+        }
 
         res.status(201).json({
             success: true,
@@ -200,7 +225,7 @@ export class UserController {
     public resetPassword = ApiHandler(async (req: Request, res: Response) => {
         const resetData: PasswordResetDTO = req.body;
 
-        if ((!resetData.email  && !resetData.userId) || !resetData.token || !resetData.newPassword) {
+        if ((!resetData.email && !resetData.userId) || !resetData.token || !resetData.newPassword) {
             throw AppError.badRequest("Email, token, and new password are required");
         }
 
