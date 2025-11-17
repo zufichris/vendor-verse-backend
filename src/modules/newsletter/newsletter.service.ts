@@ -1,10 +1,12 @@
+import { nanoid } from "nanoid";
 import { MailJetEmailService } from "../../core/shared/email-service/mail-jet";
 import { TemplatesEngine } from "../../core/shared/templates-engine";
 import { CreateNewsLetterDto, QueryNewsLetterDto } from "./newsletter.dtos";
 import { NewsletterRepository } from "./newsletter.repository";
+import { CouponService } from "../coupon";
 
 export class NewsletterService {
-    constructor(private readonly repo: NewsletterRepository) { }
+    constructor(private readonly repo: NewsletterRepository, private readonly couponSvc: CouponService) { }
 
     async subscribe(dto: CreateNewsLetterDto) {
         const found = await this.repo.findByEmail(dto.email.toLowerCase())
@@ -15,17 +17,27 @@ export class NewsletterService {
 
         const created = await this.repo.upsert(dto)
 
-        const html = TemplatesEngine.compile('join-movement.hbs', {})
+        const couponCode = `MOVEMENT-${nanoid(4)}`.toUpperCase()
+
+        await this.couponSvc.createCouponCode({
+            discountPercent: 10,
+            maxUses: 1,
+            code: couponCode,
+            userEmail: dto.email
+        })
+
+
+        const html = TemplatesEngine.compile('join-movement.hbs', { code: couponCode })
 
         MailJetEmailService.sendEmail({
-            to:{
+            to: {
                 name: `${dto.firstName} ${dto.lastName}`,
-                email: dto.email 
+                email: dto.email
             },
             subject: 'Welcome to the Movement',
             html
         })
-        
+
         return created;
     }
 

@@ -206,4 +206,8 @@ export class BaseRepository<T extends Record<string, any>>
         const result = await this.model.exists(filter).exec();
         return result !== null;
     }
+
+    isValidId(id: unknown) {
+        return mongoose.isValidObjectId(id)
+    }
 }

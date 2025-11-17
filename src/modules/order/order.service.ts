@@ -1,5 +1,5 @@
 import { OrderRepository } from "./order.repository";
-import { CreateOrderDto, CreateOrderDtoSchema, QueryOrderDtoSchema, QueryOrdersDto, UpdateOrderDto } from "./order.dtos";
+import { CreateOrderDto, QueryOrderDtoSchema, UpdateOrderDto } from "./order.dtos";
 import { AppError } from "../../core/middleware/error.middleware";
 import { UserService, UserStatus } from "../user";
 import { Order } from "./order.types";
@@ -13,6 +13,7 @@ import { MailJetEmailService } from "../../core/shared/email-service/mail-jet";
 import { env } from "../../config";
 import { setupOrdersQuery } from "./order.util";
 import { isValidObjectId } from "mongoose";
+import { CouponService } from "../coupon";
 
 export class OrderService extends OrderAdminService {
     constructor(
@@ -20,7 +21,8 @@ export class OrderService extends OrderAdminService {
         userService: UserService,
         productService: ProductService,
         paymentService: PaymentService,
-        newsletterService: NewsletterService
+        newsletterService: NewsletterService,
+        private readonly couponSvc: CouponService
     ) {
         super(orderRepo, userService, productService, paymentService, newsletterService)
     }
@@ -49,22 +51,39 @@ export class OrderService extends OrderAdminService {
         ) {
             throw AppError.forbidden("account suspended or inactive, your cannot make purchases");
         }
-        
+
         const subTotal = dto.items.reduce(
             (sum, i) => sum + i.price * i.quantity - i.discount,
             0,
         );
-        const grandTotal = subTotal + dto.tax + dto.shipping;
-        
+
+        // validate coupon
+        let coupon: { valid: boolean, discountRate: number, code: string } | null = null
+
+        if (dto.couponCode) {
+            coupon = await this.couponSvc.validateCode({
+                code: dto.couponCode,
+                userEmail: user.email.toLowerCase(),
+                totalAmount: subTotal
+            })
+        }
+
+        if (coupon && !coupon.valid) {
+            throw AppError.badRequest("Invalid coupon code")
+        }
+
+        const discount = subTotal * (coupon?.discountRate || 0) / 100
+
+        const grandTotal = (subTotal + dto.tax + dto.shipping) - discount;
+
         const orderNumber =
-        "ORD-" +
-        Date.now() +
-        "-" +
-        Math.random().toString().substr(2, 6).toUpperCase();
-        
+            "ORD-" +
+            Date.now() +
+            "-" +
+            Math.random().toString().substr(2, 6).toUpperCase();
+
         // Check products availability before creating order
         await this.checkStock(dto.items);
-        
 
         const order = await this.orderRepo.create({
             ...dto,
@@ -72,6 +91,8 @@ export class OrderService extends OrderAdminService {
             userId: user.id,
             grandTotal,
             subTotal,
+            discount,
+            discountCode: coupon?.code,
             payment: {
                 status: "pending",
                 method: dto.paymentMethod || "stripe",
@@ -81,6 +102,11 @@ export class OrderService extends OrderAdminService {
         });
 
         await this.reserveStock(order.items);
+
+        // Increment coupon usage
+        if (coupon) {
+            await this.couponSvc.incrementUsage(coupon.code)
+        }
 
         // if user checked newsletter signup, upsert user eail in newsletter collections
         if (dto.newsletter) {

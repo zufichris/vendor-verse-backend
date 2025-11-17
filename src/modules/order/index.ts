@@ -30,8 +30,10 @@ import { env } from "../../config";
 import { NewsletterService } from "../newsletter/newsletter.service";
 import { NewsletterRepository } from "../newsletter/newsletter.repository";
 import { NewsletterModel } from "../newsletter/newsletter.model";
+import { CouponModel, CouponRepository, CouponService } from "../coupon";
 
 export function initOrderModule() {
+  const couponsSvc = new CouponService(new CouponRepository(CouponModel))
   const ctrl = new OrderController(
     new OrderService(
       new OrderRepository(OrderModel),
@@ -49,7 +51,8 @@ export function initOrderModule() {
           timeout: 30000,
         }),
       ),
-      new NewsletterService(new NewsletterRepository(NewsletterModel))
+      new NewsletterService(new NewsletterRepository(NewsletterModel), couponsSvc),
+      couponsSvc
     ),
   );
   const authMw = new AuthMiddleware(new UserRepository(UserModel));

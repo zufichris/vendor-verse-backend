@@ -1,3 +1,4 @@
+import { CouponModel, CouponRepository, CouponService } from "../coupon";
 import { NewsletterController } from "./newsletter.controller";
 import { NewsletterModel } from "./newsletter.model";
 import { NewsletterRepository } from "./newsletter.repository";
@@ -9,7 +10,8 @@ export function initNewsletterModule() {
         new NewsletterService(
             new NewsletterRepository(
                 NewsletterModel
-            )
+            ),
+            new CouponService(new CouponRepository(CouponModel))
         )
     );
 

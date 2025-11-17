@@ -80,6 +80,7 @@ export type OrderDocument = Document & {
     createdAt: Date;
     updatedAt: Date;
     isDeleted: boolean;
+    discountCode?: string
 };
 
 const OrderSchema = new Schema<OrderDocument>(
@@ -91,6 +92,7 @@ const OrderSchema = new Schema<OrderDocument>(
         tax: { type: Number, required: true, default: 0 },
         shipping: { type: Number, required: true, default: 0 },
         discount: { type: Number, default: 0 },
+        discountCode: { type: String },
         grandTotal: { type: Number, required: true },
         currency: { type: String, required: true, length: 3 },
         shippingAddress: { type: AddressSchema, required: true },
