@@ -130,6 +130,15 @@ export class CouponService {
         return await this.validateCode({ code: found.code, userEmail: userEmail })
     }
 
+    async isEligibleForWelcomeBonus(userEmail: string){
+        const found = await this.couponRepo.findOne({
+            userEmail: userEmail.toLowerCase(),
+            code: { $regex: 'WELCOME-', $options: 'i' }
+        })
+
+        return !found
+    }
+
     async markCouponUsed(id: string) {
         await this.couponRepo.updateById(id, {
             used: true,
