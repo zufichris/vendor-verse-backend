@@ -13,6 +13,8 @@ import { AppError } from "../../core/middleware/error.middleware";
 import { env } from "../../config";
 import { Coupon, CouponService } from "../coupon";
 import { nanoid } from "nanoid";
+import { TemplatesEngine } from "../../core/shared/templates-engine";
+import { MailJetEmailService } from "../../core/shared/email-service/mail-jet";
 
 export class UserController {
     constructor(private readonly userService: UserService, private readonly couponsSvc: CouponService) { }
@@ -64,29 +66,6 @@ export class UserController {
         }
 
         const user = await this.userService.createUser(userData);
-
-        // Create a welcome coupon for user if none already exists
-        let existingCoup: {
-            valid: boolean;
-            discountRate: number;
-            code: string;
-        } | null = null
-        try {
-            existingCoup = await this.couponsSvc.getWelcomeCoupon(user.email)
-        } catch (error) {
-
-        }
-
-        if (!existingCoup) {
-            const code = `WELCOME-${nanoid(6)}`.toUpperCase()
-
-            await this.couponsSvc.createCouponCode({
-                discountPercent: 15,
-                maxUses: 1,
-                code,
-                userEmail: user.email
-            })
-        }
 
         res.status(201).json({
             success: true,
@@ -252,6 +231,30 @@ export class UserController {
         }
 
         const verifiedUser = await this.userService.verifyEmail(userId, token);
+
+        const eligible = await this.couponsSvc.isEligibleForWelcomeBonus(verifiedUser.user.email)
+
+        if (eligible) {
+            const couponCode = `WELCOME-${nanoid(6)}`.toUpperCase()
+
+            await this.couponsSvc.createCouponCode({
+                discountPercent: 10,
+                maxUses: 1,
+                code: couponCode,
+                userEmail: verifiedUser.user.email.toLowerCase()
+            })
+
+            const html = TemplatesEngine.compile('join-movement.hbs', { code: couponCode })
+
+            MailJetEmailService.sendEmail({
+                to: {
+                    name: `${verifiedUser.user.firstName} ${verifiedUser.user.lastName}`,
+                    email: verifiedUser.user.email
+                },
+                subject: 'Welcome to the Movement',
+                html
+            })
+        }
 
         res.cookie("refreshToken", verifiedUser.refreshToken, {
             httpOnly: true,
