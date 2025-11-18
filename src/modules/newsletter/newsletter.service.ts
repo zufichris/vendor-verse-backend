@@ -43,6 +43,27 @@ export class NewsletterService {
 
 
 
+        const couponCode = `MOVEMENT-${nanoid(4)}`.toUpperCase()
+
+        await this.couponSvc.createCouponCode({
+            discountPercent: 10,
+            maxUses: 1,
+            code: couponCode,
+            userEmail: dto.email
+        })
+
+
+        const html = TemplatesEngine.compile('join-movement.hbs', { code: couponCode })
+
+        MailJetEmailService.sendEmail({
+            to: {
+                name: `${dto.firstName} ${dto.lastName}`,
+                email: dto.email
+            },
+            subject: 'Welcome to the Movement',
+            html
+        })
+
         return created;
     }
 
