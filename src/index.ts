@@ -21,6 +21,7 @@ import { CartModel } from "./modules/cart/cart.model";
 import { OrderModel } from "./modules/order";
 import { CouponModel } from "./modules/coupon";
 import { nanoid } from "nanoid";
+import { QuiqupCLient } from "./core/http/quiqup-client";
 
 dotenv.config();
 new DB(env.mongo_uri).connect();
@@ -60,6 +61,15 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 handleUnhandledRejection();
 handleUncaughtException();
+
+// Initialize quigup client to get initial tokens
+(async () => {
+    try {
+        await QuiqupCLient.initClient()
+    } catch (error) {
+        console.log(error)
+    }
+})()
 
 
 

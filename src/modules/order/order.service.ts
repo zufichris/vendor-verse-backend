@@ -455,4 +455,63 @@ export class OrderService extends OrderAdminService {
 
         await this.markRefunded(order.id, refundAmount, refund.id)
     }
+
+    async handleQuiqUpWebhook(dto: {
+        "state": "ready_for_collection" | "out_for_delivery" | "delivery_complete" | "collected",
+        "partner_order_id": string,
+        destination: {
+            "tracking_url": string,
+            "tracking_token": string
+        }
+    }) {
+        if (["ready_for_collection", "out_for_delivery", "delivery_complete", "collected"].includes(dto.state)) {
+            const order = await this.orderRepo.findByOrderNumber(dto.partner_order_id)
+
+            if (!order) {
+                return null
+            }
+
+            const fulfillmentStatus: Order['fulfillmentStatus'] | '' = dto.state === 'collected' ? 'shipped' : dto.state === 'delivery_complete' ? 'delivered' : ''
+
+            if (!fulfillmentStatus) {
+                return null
+            }
+
+            if (order.fulfillmentStatus === fulfillmentStatus) {
+                return null
+            }
+
+            let html = ''
+            let emailSubject = ''
+
+            if (fulfillmentStatus === 'shipped') {
+                const params = {
+                    orderNumber: order.orderNumber,
+                    estimatedDeliveryDate: new Date().toISOString(),
+                    shippingProvider: "Quiqup",
+                    trackingUrl: dto.destination.tracking_url,
+                    trackingNumber: dto.destination.tracking_token
+                }
+                html = TemplatesEngine.compile('orders/order-shipped.template.hbs', params);
+                emailSubject = 'Order Shipped'
+            } else {
+                const params = {
+                    orderNumber: order.orderNumber,
+                    shippingAddress: order.shippingAddress,
+                    reviewUrl: `${env.client_url}/account/orders/${order.orderNumber}`
+                }
+                html = TemplatesEngine.compile('orders/order-delivered.template.hbs', params);
+                emailSubject = 'Order Delivered'
+            }
+
+            await MailJetEmailService.sendEmail({
+                to: {
+                    email: order.shippingAddress.email,
+                    name: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`
+                },
+                subject: emailSubject,
+                html
+            })
+        }
+    }
 }
