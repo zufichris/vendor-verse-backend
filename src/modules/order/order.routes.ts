@@ -33,6 +33,7 @@ export function createOrderRouter(
     router.delete('/cancel/:id', authMw.requireAuth, ctrl.cancelMyOrder)
 
     router.route("/webhooks/stripe").post(express.raw({ type: 'application/json' }), ctrl.stripeWebhook);
+    router.route("/webhooks/quiqup").post(ctrl.quiqupWebhook);
 
     router.use('/admin', createAdminOrderRouter(ctrl, authMw))
 

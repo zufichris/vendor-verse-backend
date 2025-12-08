@@ -12,7 +12,8 @@ export const CreateOrderDtoSchema = z.object({
     notes: z.string().optional(),
     newsletter: z.boolean().optional().default(false),
     currency: z.string(),
-    paymentMethod: PaymentMethodSchema.default('stripe')
+    paymentMethod: PaymentMethodSchema.default('stripe'),
+    shippingMethod: z.enum(['standard', 'express', 'free'])
 });
 
 export const UpdateOrderDtoSchema = z.object({

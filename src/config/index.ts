@@ -58,6 +58,11 @@ const ENVSchema = z.object({
             email: z.string().email(),
             name: z.string().default('No Reply')
         })
+    }),
+    quiqup: z.object({
+        clientId: z.string(),
+        clientSecret: z.string(),
+        baseUrl: z.string()
     })
 });
 
@@ -93,6 +98,11 @@ export const env: TENV = {
             email: process.env.EMAIL_DEFAULT_SENDER!,
             name: process.env.EMAIL_DEFAULT_SENDER_NAME || 'No Repky'
         }
+    },
+    quiqup: {
+        clientId: process.env.QUIQUP_CLIENT_ID!,
+        clientSecret: process.env.QUIQUP_CLIENT_SECRET!,
+        baseUrl: process.env.QUIQUP_BASE_URL!
     }
 };
 
