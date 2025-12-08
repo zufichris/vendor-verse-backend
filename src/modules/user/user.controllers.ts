@@ -67,6 +67,29 @@ export class UserController {
 
         const user = await this.userService.createUser(userData);
 
+        // Create a welcome coupon for user if none already exists
+        let existingCoup: {
+            valid: boolean;
+            discountRate: number;
+            code: string;
+        } | null = null
+        try {
+            existingCoup = await this.couponsSvc.getWelcomeCoupon(user.email)
+        } catch (error) {
+
+        }
+
+        if (!existingCoup) {
+            const code = `WELCOME-${nanoid(6)}`.toUpperCase()
+
+            await this.couponsSvc.createCouponCode({
+                discountPercent: 15,
+                maxUses: 1,
+                code,
+                userEmail: user.email
+            })
+        }
+
         res.status(201).json({
             success: true,
             message: "User created successfully. Please verify your email.",
