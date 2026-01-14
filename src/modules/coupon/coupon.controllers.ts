@@ -59,13 +59,15 @@ export class CouponController {
 
         const isValid = await this.svc.validateCode({ userEmail: user.email, code, totalAmount })
 
-        const { data: response, success, error } = createResponseSchema(z.object({ valid: z.boolean(), discountRate: z.number().positive() })).safeParse(isValid)
+        const { data: response, success, error } = createResponseSchema(z.object({ valid: z.boolean(), discountRate: z.number().positive() })).safeParse({
+            data: isValid
+        })
 
         if (!success) {
             throw AppError.internal('Internal server error', error.format())
         }
 
-        res.json(response)
+        res.status(response.status).json(response)
     })
 
     getCoupons = ApiHandler(async (req: Request, res: Response) => {

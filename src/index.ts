@@ -15,12 +15,6 @@ import { DB } from "./database";
 import { TemplatesEngine } from "./core/shared/templates-engine";
 import { SendgridEmailService } from "./core/shared/email-service/sengrid";
 import { MailJetEmailService } from "./core/shared/email-service/mail-jet";
-import mongoose from "mongoose";
-import { ProductCategoryModel, ProductModel, ProductVariantModel } from "./modules/product";
-import { CartModel } from "./modules/cart/cart.model";
-import { OrderModel } from "./modules/order";
-import { CouponModel } from "./modules/coupon";
-import { nanoid } from "nanoid";
 import { QuiqupCLient } from "./core/http/quiqup-client";
 
 dotenv.config();
